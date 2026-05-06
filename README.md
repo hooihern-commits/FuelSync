@@ -21,15 +21,15 @@ fuelsync/
 
 ## Getting Started
 ### Backend
-cd server
-npm install
-cp .env.example .env    # fill in your database credentials
-npm run dev
+-cd server
+-npm install
+-cp .env.example .env    # fill in your database credentials
+-npm run dev
 
 ### Mobile App
-cd client
-npm install
-npx expo start
+-cd client
+-npm install
+-npx expo start
 
 ## Team
 - Ng Hooi Hern
