@@ -12,9 +12,10 @@ timing-aware nutrition recommendations.
 
 ## Project Structure
 fuelsync/
-
 ├── client/       # React Native (Expo) mobile app
+
 ├── server/       # Node.js + Express backend API
+
 └── dashboard/    # React.js coach/admin web dashboard
 
 ## Getting Started
