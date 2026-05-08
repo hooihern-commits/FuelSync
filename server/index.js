@@ -1,21 +1,16 @@
 const express = require('express');
 const app = express();
-
 require('dotenv').config();
 
-const authRoutes = require('./routes/auth');
-const pool = require('./db');
-
 app.use(express.json());
-app.use('/auth', authRoutes);
 
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('Database connection failed:', err);
-  } else {
-    console.log('Database connected at:', res.rows[0].now);
-  }
-});
+// Routes
+app.use('/auth',        require('./routes/auth'));
+app.use('/meals',       require('./routes/meals'));
+app.use('/workouts',    require('./routes/workouts'));
+app.use('/suggestions', require('./routes/suggestions'));
+app.use('/recovery',    require('./routes/recovery'));
+
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -23,5 +18,5 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`FuelSync server running on port ${PORT}`);
 });
