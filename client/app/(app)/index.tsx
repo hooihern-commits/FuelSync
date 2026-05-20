@@ -4,8 +4,6 @@ import { router } from 'expo-router';
 import { removeToken } from '../../src/storage/token';
 
 export default function HomeScreen() {
-  console.log('HomeScreen rendered');
-  
   const handleLogout = async () => {
     await removeToken();
     router.replace('/(auth)/login');
