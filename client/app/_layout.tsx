@@ -1,31 +1,23 @@
-import { useEffect, useState } from 'react';
-import { Slot, router, usePathname } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect } from 'react';
+import { Slot, router } from 'expo-router';
+import { getToken } from '../src/storage/token';
 
 export default function RootLayout() {
-  const [checking, setChecking] = useState(true);
-  const pathname = usePathname();
-
   useEffect(() => {
     const checkToken = async () => {
-      if (pathname !== '/') {
-        setChecking(false);
-        return;
-      }
-
-      const token = await AsyncStorage.getItem('token');
-      if (token) {
-        router.replace('/(app)/');
-      } else {
+      try {
+        const token = await getToken();
+        if (token) {
+          router.replace('/(app)');
+        } else {
+          router.replace('/(auth)/login');
+        }
+      } catch (e) {
         router.replace('/(auth)/login');
       }
-      setChecking(false);
     };
-
     checkToken();
-  }, [pathname]);
-
-  if (checking && pathname === '/') return null;
+  }, []);
 
   return <Slot />;
 }
