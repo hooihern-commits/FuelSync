@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getToken } from '../storage/token';
 
 const api = axios.create({
-  baseURL: 'http://172.20.10.2:3000',
+  baseURL: process.env.EXPO_PUBLIC_API_URL,
 });
 
 api.interceptors.request.use(async (config) => {
