@@ -71,7 +71,7 @@ export default function PlanWorkoutScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Plan Workout</Text>
         <Text style={styles.subtitle}>
-          Choose your workout details, then get a pre-workout nutrition suggestion.
+          Input your workout details, then get a pre-workout nutrition suggestion.
         </Text>
 
         <Text style={styles.label}>Workout Type</Text>
@@ -79,18 +79,17 @@ export default function PlanWorkoutScreen() {
           <Picker
             selectedValue={workoutType}
             onValueChange={(value) => setWorkoutType(value)}
+            style={{ color: '#01696f' }} 
           >
-            <Picker.Item label="Running" value="running" />
-            <Picker.Item label="Cycling" value="cycling" />
-            <Picker.Item label="Swimming" value="swimming" />
-            <Picker.Item label="Gym" value="gym" />
-            <Picker.Item label="HIIT" value="hiit" />
-            <Picker.Item label="Football" value="football" />
-            <Picker.Item label="Basketball" value="basketball" />
-            <Picker.Item label="Badminton" value="badminton" />
-            <Picker.Item label="Tennis" value="tennis" />
-            <Picker.Item label="Yoga" value="yoga" />
-            <Picker.Item label="Other" value="other" />
+            <Picker.Item label="Running" value="running" color="#01696f" />
+            <Picker.Item label="Cycling" value="cycling" color="#01696f" />
+            <Picker.Item label="Swimming" value="swimming" color="#01696f" />
+            <Picker.Item label="Gym" value="gym" color="#01696f" />
+            <Picker.Item label="Football" value="football" color="#01696f" />
+            <Picker.Item label="Basketball" value="basketball" color="#01696f" />
+            <Picker.Item label="Badminton" value="badminton" color="#01696f" />
+            <Picker.Item label="Tennis" value="tennis" color="#01696f" />
+            <Picker.Item label="Other" value="other" color="#01696f" />
           </Picker>
         </View>
 
@@ -160,7 +159,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: '#f4f8f8',
   },
   inputLike: {
     borderWidth: 1,
