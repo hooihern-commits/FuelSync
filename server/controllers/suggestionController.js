@@ -3,7 +3,7 @@ const pool = require('../db');
 // Rule-based logic (v1 — will be replaced by ML model)
 const calcPreAdvice = (type, rpe) => {
   const intense = rpe >= 6;
-  const cardio = ['running','cycling','hiit','swimming','football','soccer','rugby','touch rugby','hockey','lacrosse','ultimate frisbee','basketball','volleyball','badminton','tennis','squash','table tennis'].includes(type.toLowerCase());
+  const cardio = ['running','cycling','hiit','swimming','football','basketball','badminton','tennis','other'].includes(type.toLowerCase());
   if (intense && cardio) return {
     text: 'High-intensity cardio ahead. Eat 60–80g carbs + 20–25g protein 2–3 hrs before. Keep fat low.',
     suggested_carbs: 70, suggested_protein: 22, suggested_calories: 450

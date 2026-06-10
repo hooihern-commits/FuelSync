@@ -8,6 +8,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { Picker } from '@react-native-picker/picker';
 import Slider from '@react-native-community/slider';
 import api from '../../src/api/client';
+import { useRouter } from 'expo-router';
 
 type Mode = 'plan' | 'log' | 'update';
 
@@ -15,6 +16,7 @@ export default function PlanWorkoutScreen() {
   const [mode, setMode] = useState<Mode>('plan');
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState<any>(null);
+  const [suggestionId, setSuggestionId] = useState<number | null>(null);
 
   // ── Plan mode ────────────────────────────────────────────
   const [workoutType, setWorkoutType] = useState('running');
@@ -36,6 +38,7 @@ export default function PlanWorkoutScreen() {
   const [plannedWorkouts, setPlannedWorkouts] = useState<any[]>([]);
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
   const [loadingPlanned, setLoadingPlanned] = useState(false);
+  const router = useRouter();
 
   // ── Date/time helpers ─────────────────────────────────────
   const onPlannedTimeChange = (_e: DateTimePickerEvent, date?: Date) => {
@@ -67,6 +70,7 @@ export default function PlanWorkoutScreen() {
 
   const switchMode = (next: Mode) => {
     setSuggestion(null);
+    setSuggestionId(null);
     setMode(next);
     if (next === 'update') fetchPlannedWorkouts();
   };
@@ -75,6 +79,7 @@ export default function PlanWorkoutScreen() {
   const workoutTypes = [
     { label: 'Running', value: 'running' },
     { label: 'Cycling', value: 'cycling' },
+    { label: 'HIIT', value: 'hiit' },
     { label: 'Swimming', value: 'swimming' },
     { label: 'Gym', value: 'gym' },
     { label: 'Football', value: 'football' },
@@ -115,6 +120,7 @@ export default function PlanWorkoutScreen() {
 
       const suggestionResponse = await api.post('/suggestions/pre', { workout_id: workoutId });
       setSuggestion(suggestionResponse.data);
+      setSuggestionId(suggestionResponse.data?.suggestion?.id ?? null);
 
       Alert.alert(
         'Workout Planned!',
@@ -153,6 +159,7 @@ export default function PlanWorkoutScreen() {
 
       const suggestionResponse = await api.post('/suggestions/post', { workout_id: workoutId });
       setSuggestion(suggestionResponse.data);
+      setSuggestionId(suggestionResponse.data?.suggestion?.id ?? null);
 
       const duration = workoutResponse.data?.duration_mins;
       Alert.alert('Workout Logged!', `Total training time: ${duration} minutes.`, [{ text: 'Got it' }]);
@@ -188,6 +195,7 @@ export default function PlanWorkoutScreen() {
 
       const suggestionResponse = await api.post('/suggestions/post', { workout_id: workoutId });
       setSuggestion(suggestionResponse.data);
+      setSuggestionId(suggestionResponse.data?.suggestion?.id ?? null);
 
       const duration = workoutResponse.data?.duration_mins;
       Alert.alert('Workout Updated!', `Total training time: ${duration} minutes.`, [{ text: 'Got it' }]);
@@ -432,8 +440,20 @@ export default function PlanWorkoutScreen() {
             </Text>
             <Text style={styles.cardText}>Carbs: {suggestionData.carbs_g ?? '—'} g</Text>
             <Text style={styles.cardText}>Protein: {suggestionData.protein_g ?? '—'} g</Text>
-            <Text style={styles.cardText}>Hydration: {suggestionData.hydration_ml ?? '—'} ml</Text>
             {suggestionData.notes && <Text style={styles.cardText}>Notes: {suggestionData.notes}</Text>}
+            {/* ← new button */}
+    <TouchableOpacity
+      style={styles.logMealBtn}
+      onPress={() => router.push({
+        pathname: '/(app)/log-meal',
+        params: {
+          suggestion_id: suggestionId ?? '',
+          meal_type: mode === 'plan' ? 'pre_workout' : 'post_workout',
+        },
+      })}
+    >
+      <Text style={styles.logMealBtnText}>🍽 Log My Meal</Text>
+    </TouchableOpacity>
           </View>
         )}
 
@@ -482,4 +502,9 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8, color: '#01696f' },
   cardText: { fontSize: 15, marginBottom: 6, color: '#222' },
+  logMealBtn: {
+  marginTop: 14, backgroundColor: '#01696f',
+  borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+  },
+  logMealBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
 });

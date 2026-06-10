@@ -28,7 +28,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="log-meal"
         options={{
-          title: 'Meals',
+          title: 'Log Meal',
           tabBarIcon: ({ color, size }) => <Ionicons name="restaurant-outline" size={size} color={color} />,
         }}
       />

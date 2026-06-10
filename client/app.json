@@ -39,6 +39,18 @@
           }
         }
       ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "FuelSync needs camera access to scan your meals."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FuelSync needs photo library access to import meal photos."
+        }
+      ],
       "@react-native-community/datetimepicker"
     ],
     "experiments": {
