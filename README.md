@@ -138,7 +138,7 @@ uvicorn main:app --reload
 | `users` | id, name, email, password, age, weight, height, goal |
 | `meals` | id, user_id, name, calories, protein, carbs, fats, meal_time, photo_url, suggestion_id |
 | `workouts` | id, user_id, planned_type, planned_time, planned_rpe, actual stats, status, data_source |
-| `suggestions` | id, workout_id, type (pre/post), carbs_g, protein_g, hydration_ml, notes |
+| `suggestions` | id, workout_id, type (pre/post), carbs_g, protein_g, notes |
 | `recovery_checkins` | id, workout_id, energy_level, muscle_soreness, sleep_quality, overall_feeling, recovery_score |
 
 ---
