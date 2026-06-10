@@ -4,9 +4,11 @@ const pool = require('../db');
 const createWorkout = async (req, res) => {
   const { planned_type, planned_time, planned_rpe } = req.body;
   const userId = req.user.id;
-  if (!planned_type || !planned_time) {
-    return res.status(400).json({ error: 'planned_type and planned_time are required.' });
-  }
+    if (!planned_type || !planned_time || !planned_rpe) {
+      return res.status(400).json({
+        error: 'planned_type, planned_time, and planned_rpe are all required.'
+      });
+    }
   try {
     const result = await pool.query(
       `INSERT INTO workouts (user_id, planned_type, planned_time, planned_rpe)
@@ -24,8 +26,8 @@ const updateWorkout = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   const {
-    actual_type, actual_start_time, actual_end_time, duration_mins,
-    actual_rpe, heart_rate_avg, heart_rate_max, calories_burned,
+    actual_type, actual_start_time, actual_end_time,
+    actual_rpe, heart_rate_avg, calories_burned,
     data_source, notes, status
   } = req.body;
 
@@ -33,28 +35,44 @@ const updateWorkout = async (req, res) => {
     const check = await pool.query(
       'SELECT id FROM workouts WHERE id=$1 AND user_id=$2', [id, userId]
     );
-    if (check.rows.length === 0) return res.status(404).json({ error: 'Workout not found.' });
+    if (check.rows.length === 0)
+      return res.status(404).json({ error: 'Workout not found.' });
+
+    // Compute duration if both times provided, otherwise null
+    let duration_mins = null;
+    if (actual_start_time && actual_end_time) {
+      const start = new Date(actual_start_time);
+      const end = new Date(actual_end_time);
+      if (end <= start) return res.status(400).json({ error: 'End time must be after start time.' });
+      duration_mins = Math.round((end - start) / 60000);
+    }
 
     const result = await pool.query(
       `UPDATE workouts SET
-        actual_type=COALESCE($1,actual_type),
-        actual_start_time=COALESCE($2,actual_start_time),
-        actual_end_time=COALESCE($3,actual_end_time),
-        duration_mins=COALESCE($4,duration_mins),
-        actual_rpe=COALESCE($5,actual_rpe),
-        heart_rate_avg=COALESCE($6,heart_rate_avg),
-        heart_rate_max=COALESCE($7,heart_rate_max),
-        calories_burned=COALESCE($8,calories_burned),
-        data_source=COALESCE($9,data_source),
-        notes=COALESCE($10,notes),
-        status=COALESCE($11,status),
-        updated_at=NOW()
-       WHERE id=$12 AND user_id=$13 RETURNING *`,
-      [actual_type, actual_start_time, actual_end_time, duration_mins,
-       actual_rpe, heart_rate_avg, heart_rate_max, calories_burned,
-       data_source, notes, status, id, userId]
+        actual_type       = COALESCE($1, actual_type),
+        actual_start_time = COALESCE($2, actual_start_time),
+        actual_end_time   = COALESCE($3, actual_end_time),
+        duration_mins     = COALESCE($4, duration_mins),
+        actual_rpe        = COALESCE($5, actual_rpe),
+        heart_rate_avg    = COALESCE($6, heart_rate_avg),
+        calories_burned   = COALESCE($7, calories_burned),
+        data_source       = COALESCE($8, data_source),
+        notes             = COALESCE($9, notes),
+        status            = COALESCE($10, status),
+        updated_at        = NOW()
+      WHERE id=$11 AND user_id=$12 RETURNING *`,
+      [
+        actual_type, actual_start_time, actual_end_time, duration_mins,
+        actual_rpe, heart_rate_avg ?? null, calories_burned ?? null,
+        data_source, notes, status, id, userId
+      ]
     );
-    res.json({ message: 'Workout updated!', workout: result.rows[0] });
+
+    res.json({
+      message: 'Workout updated!',
+      duration_mins,
+      workout: result.rows[0]
+    });
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
   }
