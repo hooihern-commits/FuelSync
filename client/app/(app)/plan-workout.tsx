@@ -8,41 +8,50 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { Picker } from '@react-native-picker/picker';
 import Slider from '@react-native-community/slider';
 import api from '../../src/api/client';
-import { useRouter } from 'expo-router';
 
 type Mode = 'plan' | 'log' | 'update';
 
+const WORKOUT_TYPES = [
+  { label: 'Running',    value: 'running'    },
+  { label: 'Cycling',    value: 'cycling'    },
+  { label: 'Swimming',   value: 'swimming'   },
+  { label: 'Gym',        value: 'gym'        },
+  { label: 'Football',   value: 'football'   },
+  { label: 'Basketball', value: 'basketball' },
+  { label: 'Badminton',  value: 'badminton'  },
+  { label: 'Tennis',     value: 'tennis'     },
+  { label: 'Other',      value: 'other'      },
+];
+
 export default function PlanWorkoutScreen() {
-  const [mode, setMode] = useState<Mode>('plan');
+  const [mode, setMode]       = useState<Mode>('plan');
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState<any>(null);
-  const [suggestionId, setSuggestionId] = useState<number | null>(null);
 
-  // ── Plan mode ────────────────────────────────────────────
-  const [workoutType, setWorkoutType] = useState('running');
-  const [plannedTime, setPlannedTime] = useState(new Date());
-  const [showPlannedTimePicker, setShowPlannedTimePicker] = useState(false);
-  const [plannedRpe, setPlannedRpe] = useState(5);
+  // ── Plan ─────────────────────────────────────────────────
+  const [workoutType, setWorkoutType]             = useState('running');
+  const [plannedTime, setPlannedTime]             = useState(new Date());
+  const [showPlannedPicker, setShowPlannedPicker] = useState(false);
+  const [plannedRpe, setPlannedRpe]               = useState(5);
 
-  // ── Shared (log + update) ─────────────────────────────────
-  const [logType, setLogType] = useState('running');
-  const [startTime, setStartTime] = useState(new Date());
-  const [endTime, setEndTime] = useState(new Date());
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
-  const [actualRpe, setActualRpe] = useState(5);
-  const [heartRate, setHeartRate] = useState('');
-  const [calories, setCalories] = useState('');
+  // ── Log + Update shared ───────────────────────────────────
+  const [logType, setLogType]                     = useState('running');
+  const [startTime, setStartTime]                 = useState(new Date());
+  const [endTime, setEndTime]                     = useState(new Date());
+  const [showStartPicker, setShowStartPicker]     = useState(false);
+  const [showEndPicker, setShowEndPicker]         = useState(false);
+  const [actualRpe, setActualRpe]                 = useState(5);
+  const [heartRate, setHeartRate]                 = useState('');
+  const [calories, setCalories]                   = useState('');
 
-  // ── Update mode ───────────────────────────────────────────
-  const [plannedWorkouts, setPlannedWorkouts] = useState<any[]>([]);
+  // ── Update ────────────────────────────────────────────────
+  const [plannedWorkouts, setPlannedWorkouts]     = useState<any[]>([]);
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
-  const [loadingPlanned, setLoadingPlanned] = useState(false);
-  const router = useRouter();
+  const [loadingPlanned, setLoadingPlanned]       = useState(false);
 
-  // ── Date/time helpers ─────────────────────────────────────
+  // ── Pickers ───────────────────────────────────────────────
   const onPlannedTimeChange = (_e: DateTimePickerEvent, date?: Date) => {
-    setShowPlannedTimePicker(false);
+    setShowPlannedPicker(false);
     if (date) setPlannedTime(date);
   };
   const onStartChange = (_e: DateTimePickerEvent, date?: Date) => {
@@ -54,42 +63,7 @@ export default function PlanWorkoutScreen() {
     if (date) setEndTime(date);
   };
 
-  const fetchPlannedWorkouts = async () => {
-    try {
-      setLoadingPlanned(true);
-      const res = await api.get('/workouts/planned');
-      const workouts = res.data.workouts ?? [];
-      setPlannedWorkouts(workouts);
-      if (workouts.length > 0) setSelectedWorkoutId(workouts[0].id);
-    } catch {
-      Alert.alert('Error', 'Could not load planned workouts.');
-    } finally {
-      setLoadingPlanned(false);
-    }
-  };
-
-  const switchMode = (next: Mode) => {
-    setSuggestion(null);
-    setSuggestionId(null);
-    setMode(next);
-    if (next === 'update') fetchPlannedWorkouts();
-  };
-
-  // ── Workout type picker items (reused in all modes) ───────
-  const workoutTypes = [
-    { label: 'Running', value: 'running' },
-    { label: 'Cycling', value: 'cycling' },
-    { label: 'HIIT', value: 'hiit' },
-    { label: 'Swimming', value: 'swimming' },
-    { label: 'Gym', value: 'gym' },
-    { label: 'Football', value: 'football' },
-    { label: 'Basketball', value: 'basketball' },
-    { label: 'Badminton', value: 'badminton' },
-    { label: 'Tennis', value: 'tennis' },
-    { label: 'Other', value: 'other' },
-  ];
-
-  // ── Validate start < end ──────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────
   const validateTimes = (): boolean => {
     if (endTime <= startTime) {
       Alert.alert('Invalid Times', 'End time must be after start time.');
@@ -98,8 +72,28 @@ export default function PlanWorkoutScreen() {
     return true;
   };
 
-  // ── Handlers ──────────────────────────────────────────────
+  const fetchPlannedWorkouts = async () => {
+    try {
+      setLoadingPlanned(true);
+      const res = await api.get('/workouts/planned');
+      const workouts = res.data.workouts ?? [];
+      setPlannedWorkouts(workouts);
+      if (workouts.length > 0) setSelectedWorkoutId(String(workouts[0].id));
+    } catch (err: any) {
+      console.error('fetchPlannedWorkouts error:', err.response?.data || err.message);
+      Alert.alert('Error', 'Could not load planned workouts.');
+    } finally {
+      setLoadingPlanned(false);
+    }
+  };
 
+  const switchMode = (next: Mode) => {
+    setSuggestion(null);
+    setMode(next);
+    if (next === 'update') fetchPlannedWorkouts();
+  };
+
+  // ── Submit: plan ──────────────────────────────────────────
   const handlePlanSubmit = async () => {
     try {
       setLoading(true);
@@ -108,7 +102,7 @@ export default function PlanWorkoutScreen() {
       const workoutResponse = await api.post('/workouts', {
         planned_type: workoutType,
         planned_time: plannedTime.toISOString(),
-        planned_rpe: plannedRpe,
+        planned_rpe:  plannedRpe,
       });
 
       const workoutId =
@@ -120,7 +114,6 @@ export default function PlanWorkoutScreen() {
 
       const suggestionResponse = await api.post('/suggestions/pre', { workout_id: workoutId });
       setSuggestion(suggestionResponse.data);
-      setSuggestionId(suggestionResponse.data?.suggestion?.id ?? null);
 
       Alert.alert(
         'Workout Planned!',
@@ -128,27 +121,32 @@ export default function PlanWorkoutScreen() {
         [{ text: 'Got it' }]
       );
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || error.message || 'Something went wrong');
+      console.error('handlePlanSubmit error:', error.response?.data || error.message);
+      Alert.alert('Error', error.response?.data?.error || error.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Submit: log unplanned ─────────────────────────────────
   const handleLogSubmit = async () => {
     if (!validateTimes()) return;
+
+    const payload = {
+      actual_type:       logType,
+      actual_start_time: startTime.toISOString(),
+      actual_end_time:   endTime.toISOString(),
+      actual_rpe:        actualRpe,
+      heart_rate_avg:    heartRate ? Number(heartRate) : null,
+      calories_burned:   calories  ? Number(calories)  : null,
+      data_source:       'manual',
+    };
+
     try {
       setLoading(true);
       setSuggestion(null);
 
-      const workoutResponse = await api.post('/workouts/log', {
-        actual_type: logType,
-        actual_start_time: startTime.toISOString(),
-        actual_end_time: endTime.toISOString(),
-        actual_rpe: actualRpe,
-        heart_rate_avg: heartRate ? Number(heartRate) : null,
-        calories_burned: calories ? Number(calories) : null,
-        data_source: 'manual',
-      });
+      const workoutResponse = await api.post('/workouts/log', payload);
 
       const workoutId =
         workoutResponse.data?.workout?.id ??
@@ -159,61 +157,65 @@ export default function PlanWorkoutScreen() {
 
       const suggestionResponse = await api.post('/suggestions/post', { workout_id: workoutId });
       setSuggestion(suggestionResponse.data);
-      setSuggestionId(suggestionResponse.data?.suggestion?.id ?? null);
 
       const duration = workoutResponse.data?.duration_mins;
       Alert.alert('Workout Logged!', `Total training time: ${duration} minutes.`, [{ text: 'Got it' }]);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || error.message || 'Something went wrong');
+      console.error('handleLogSubmit error:', error.response?.data || error.message);
+      Alert.alert('Error', error.response?.data?.error || error.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Submit: update planned ────────────────────────────────
   const handleUpdateSubmit = async () => {
     if (!selectedWorkoutId) {
       Alert.alert('No workout selected', 'Please select a planned workout.');
       return;
     }
     if (!validateTimes()) return;
+
+    const payload = {
+      actual_type:       logType,
+      actual_start_time: startTime.toISOString(),
+      actual_end_time:   endTime.toISOString(),
+      actual_rpe:        actualRpe,
+      heart_rate_avg:    heartRate ? Number(heartRate) : null,
+      calories_burned:   calories  ? Number(calories)  : null,
+      data_source:       'manual',
+    };
+
     try {
       setLoading(true);
       setSuggestion(null);
 
-      const workoutResponse = await api.patch(`/workouts/${selectedWorkoutId}`, {
-        actual_type: logType,
-        actual_start_time: startTime.toISOString(),
-        actual_end_time: endTime.toISOString(),
-        actual_rpe: actualRpe,
-        heart_rate_avg: heartRate ? Number(heartRate) : null,
-        calories_burned: calories ? Number(calories) : null,
-        data_source: 'manual',
-        status: 'completed',
-      });
+      const workoutResponse = await api.patch(`/workouts/${selectedWorkoutId}`, payload);
 
       const workoutId = workoutResponse.data?.workout?.id ?? selectedWorkoutId;
 
       const suggestionResponse = await api.post('/suggestions/post', { workout_id: workoutId });
       setSuggestion(suggestionResponse.data);
-      setSuggestionId(suggestionResponse.data?.suggestion?.id ?? null);
 
       const duration = workoutResponse.data?.duration_mins;
       Alert.alert('Workout Updated!', `Total training time: ${duration} minutes.`, [{ text: 'Got it' }]);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || error.message || 'Something went wrong');
+      console.error('handleUpdateSubmit error:', error.response?.data || error.message);
+      Alert.alert('Error', error.response?.data?.error || error.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDidntDoWorkout = async () => {
+  // ── Didn't do workout ─────────────────────────────────────
+  const handleDidntDoWorkout = () => {
     if (!selectedWorkoutId) {
       Alert.alert('No workout selected', 'Please select a planned workout.');
       return;
     }
     Alert.alert(
       'Skip Workout',
-      'Are you sure you want to mark this workout as skipped?',
+      'Mark this workout as skipped? This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -222,20 +224,12 @@ export default function PlanWorkoutScreen() {
           onPress: async () => {
             try {
               setLoading(true);
-              await api.patch(`/workouts/${selectedWorkoutId}`, {
-                status: 'skipped',
-                actual_type: null,
-                actual_start_time: null,
-                actual_end_time: null,
-                duration_mins: null,
-                actual_rpe: null,
-                heart_rate_avg: null,
-                calories_burned: null,
-              });
-              Alert.alert('Workout Skipped', 'Your workout has been marked as skipped.', [{ text: 'OK' }]);
+              await api.patch(`/workouts/${selectedWorkoutId}`, { status: 'skipped' });
               setSuggestion(null);
+              Alert.alert('Workout Skipped', 'Your workout has been marked as skipped.', [{ text: 'OK' }]);
             } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.message || error.message || 'Something went wrong');
+              console.error('handleDidntDoWorkout error:', error.response?.data || error.message);
+              Alert.alert('Error', error.response?.data?.error || error.message || 'Something went wrong');
             } finally {
               setLoading(false);
             }
@@ -247,13 +241,13 @@ export default function PlanWorkoutScreen() {
 
   const suggestionData = suggestion?.suggestion ?? suggestion;
 
-  // ── Shared form fields for log + update ──────────────────
+  // ── Shared actual fields ──────────────────────────────────
   const renderActualFields = () => (
     <>
       <Text style={styles.label}>Workout Type</Text>
       <View style={styles.pickerBox}>
         <Picker selectedValue={logType} onValueChange={setLogType} style={{ color: '#01696f' }}>
-          {workoutTypes.map((t) => (
+          {WORKOUT_TYPES.map((t) => (
             <Picker.Item key={t.value} label={t.label} value={t.value} color="#01696f" />
           ))}
         </Picker>
@@ -287,7 +281,9 @@ export default function PlanWorkoutScreen() {
         <Text>10 — Max</Text>
       </View>
 
-      <Text style={styles.label}>Avg Heart Rate <Text style={styles.optional}>(optional)</Text></Text>
+      <Text style={styles.label}>
+        Avg Heart Rate <Text style={styles.optional}>(optional)</Text>
+      </Text>
       <TextInput
         style={styles.inputLike}
         keyboardType="numeric"
@@ -297,7 +293,9 @@ export default function PlanWorkoutScreen() {
         onChangeText={setHeartRate}
       />
 
-      <Text style={styles.label}>Calories Burned <Text style={styles.optional}>(optional)</Text></Text>
+      <Text style={styles.label}>
+        Calories Burned <Text style={styles.optional}>(optional)</Text>
+      </Text>
       <TextInput
         style={styles.inputLike}
         keyboardType="numeric"
@@ -313,7 +311,7 @@ export default function PlanWorkoutScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
 
-        {/* ── PLAN MODE ─────────────────────────────────── */}
+        {/* ── PLAN ─────────────────────────────────────── */}
         {mode === 'plan' && (
           <>
             <Text style={styles.title}>Plan Workout</Text>
@@ -324,18 +322,20 @@ export default function PlanWorkoutScreen() {
             <Text style={styles.label}>Workout Type</Text>
             <View style={styles.pickerBox}>
               <Picker selectedValue={workoutType} onValueChange={setWorkoutType} style={{ color: '#01696f' }}>
-                {workoutTypes.map((t) => (
+                {WORKOUT_TYPES.map((t) => (
                   <Picker.Item key={t.value} label={t.label} value={t.value} color="#01696f" />
                 ))}
               </Picker>
             </View>
 
             <Text style={styles.label}>Planned Date & Time</Text>
-            <TouchableOpacity style={styles.inputLike} onPress={() => setShowPlannedTimePicker(true)}>
+            <TouchableOpacity style={styles.inputLike} onPress={() => setShowPlannedPicker(true)}>
               <Text style={styles.inputLikeText}>{plannedTime.toLocaleString()}</Text>
             </TouchableOpacity>
-            {showPlannedTimePicker && (
-              <DateTimePicker value={plannedTime} mode="datetime" display="default" onChange={onPlannedTimeChange} />
+            {showPlannedPicker && (
+              <DateTimePicker
+                value={plannedTime} mode="datetime" display="default" onChange={onPlannedTimeChange}
+              />
             )}
 
             <Text style={styles.label}>Planned RPE: {plannedRpe}</Text>
@@ -351,20 +351,22 @@ export default function PlanWorkoutScreen() {
             </View>
 
             <TouchableOpacity style={styles.button} onPress={handlePlanSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Plan Workout</Text>}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => switchMode('log')}>
-              <Text style={styles.secondaryButtonText}>Forgot to plan? Log a completed workout</Text>
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.buttonText}>Plan Workout</Text>}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.secondaryButton} onPress={() => switchMode('update')}>
               <Text style={styles.secondaryButtonText}>Already planned? Update your workout</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => switchMode('log')}>
+              <Text style={styles.secondaryButtonText}>Forgot to plan? Log a completed workout</Text>
+            </TouchableOpacity>
           </>
         )}
 
-        {/* ── LOG MODE ──────────────────────────────────── */}
+        {/* ── LOG ──────────────────────────────────────── */}
         {mode === 'log' && (
           <>
             <TouchableOpacity onPress={() => switchMode('plan')}>
@@ -379,12 +381,14 @@ export default function PlanWorkoutScreen() {
             {renderActualFields()}
 
             <TouchableOpacity style={styles.button} onPress={handleLogSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Log Workout</Text>}
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.buttonText}>Log Workout</Text>}
             </TouchableOpacity>
           </>
         )}
 
-        {/* ── UPDATE MODE ───────────────────────────────── */}
+        {/* ── UPDATE ───────────────────────────────────── */}
         {mode === 'update' && (
           <>
             <TouchableOpacity onPress={() => switchMode('plan')}>
@@ -397,33 +401,58 @@ export default function PlanWorkoutScreen() {
             </Text>
 
             <Text style={styles.label}>Select Planned Workout</Text>
+
             {loadingPlanned ? (
               <ActivityIndicator color="#01696f" style={{ marginVertical: 12 }} />
             ) : plannedWorkouts.length === 0 ? (
-              <Text style={styles.emptyText}>No planned workouts found.</Text>
-            ) : (
-              <View style={styles.pickerBox}>
-                <Picker
-                  selectedValue={selectedWorkoutId}
-                  onValueChange={setSelectedWorkoutId}
-                  style={{ color: '#01696f' }}
-                >
-                  {plannedWorkouts.map((w) => (
-                    <Picker.Item
-                      key={w.id}
-                      label={`${w.planned_type} — ${new Date(w.planned_time).toLocaleDateString()}`}
-                      value={w.id}
-                      color="#01696f"
-                    />
-                  ))}
-                </Picker>
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyText}>No planned workouts found.</Text>
+                <Text style={styles.emptySubtext}>Head back and plan a workout first.</Text>
               </View>
+            ) : (
+              plannedWorkouts.map((w) => {
+                const isSelected = selectedWorkoutId === String(w.id);
+                const typeLabel  = w.planned_type.charAt(0).toUpperCase() + w.planned_type.slice(1);
+                const dateLabel  = new Date(w.planned_time).toLocaleDateString('en-SG', {
+                  weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+                });
+                const timeLabel  = new Date(w.planned_time).toLocaleTimeString('en-SG', {
+                  hour: '2-digit', minute: '2-digit',
+                });
+                return (
+                  <TouchableOpacity
+                    key={w.id}
+                    onPress={() => setSelectedWorkoutId(String(w.id))}
+                    style={[styles.workoutCard, isSelected && styles.workoutCardSelected]}
+                    activeOpacity={0.75}
+                  >
+                    <View style={styles.workoutCardRow}>
+                      <Text style={[styles.workoutCardType, isSelected && styles.workoutCardTypeSelected]}>
+                        {typeLabel}
+                      </Text>
+                      {isSelected && (
+                        <View style={styles.selectedBadge}>
+                          <Text style={styles.selectedBadgeText}>Selected</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.workoutCardDate, isSelected && styles.workoutCardDateSelected]}>
+                      {dateLabel} · {timeLabel}
+                    </Text>
+                    <Text style={[styles.workoutCardRpe, isSelected && styles.workoutCardRpeSelected]}>
+                      Planned RPE {w.planned_rpe}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })
             )}
 
             {renderActualFields()}
 
             <TouchableOpacity style={styles.button} onPress={handleUpdateSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Update Workout</Text>}
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.buttonText}>Update Workout</Text>}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.skipButton} onPress={handleDidntDoWorkout} disabled={loading}>
@@ -432,7 +461,7 @@ export default function PlanWorkoutScreen() {
           </>
         )}
 
-        {/* ── SUGGESTION CARD ───────────────────────────── */}
+        {/* ── SUGGESTION CARD ──────────────────────────── */}
         {suggestionData && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>
@@ -440,20 +469,10 @@ export default function PlanWorkoutScreen() {
             </Text>
             <Text style={styles.cardText}>Carbs: {suggestionData.carbs_g ?? '—'} g</Text>
             <Text style={styles.cardText}>Protein: {suggestionData.protein_g ?? '—'} g</Text>
-            {suggestionData.notes && <Text style={styles.cardText}>Notes: {suggestionData.notes}</Text>}
-            {/* ← new button */}
-    <TouchableOpacity
-      style={styles.logMealBtn}
-      onPress={() => router.push({
-        pathname: '/(app)/log-meal',
-        params: {
-          suggestion_id: suggestionId ?? '',
-          meal_type: mode === 'plan' ? 'pre_workout' : 'post_workout',
-        },
-      })}
-    >
-      <Text style={styles.logMealBtnText}>🍽 Log My Meal</Text>
-    </TouchableOpacity>
+            <Text style={styles.cardText}>Hydration: {suggestionData.hydration_ml ?? '—'} ml</Text>
+            {suggestionData.notes && (
+              <Text style={styles.cardText}>Notes: {suggestionData.notes}</Text>
+            )}
           </View>
         )}
 
@@ -463,48 +482,38 @@ export default function PlanWorkoutScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  scroll: { padding: 24, paddingBottom: 48 },
-  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#666', marginBottom: 8, lineHeight: 20 },
-  label: { fontSize: 16, fontWeight: '600', marginBottom: 8, marginTop: 16 },
-  optional: { fontSize: 13, fontWeight: '400', color: '#999' },
-  pickerBox: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    overflow: 'hidden', backgroundColor: '#f4f8f8',
-  },
-  inputLike: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    padding: 14, backgroundColor: '#fff',
-  },
-  inputLikeText: { fontSize: 16, color: '#111' },
-  rpeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 },
-  button: {
-    marginTop: 24, backgroundColor: '#01696f',
-    borderRadius: 10, paddingVertical: 14, alignItems: 'center',
-  },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  secondaryButton: {
-    marginTop: 12, borderWidth: 1, borderColor: '#01696f',
-    borderRadius: 10, paddingVertical: 14, alignItems: 'center',
-  },
-  secondaryButtonText: { color: '#01696f', fontSize: 15, fontWeight: '600' },
-  skipButton: {
-    marginTop: 12, borderWidth: 1, borderColor: '#cc3333',
-    borderRadius: 10, paddingVertical: 14, alignItems: 'center',
-  },
-  skipButtonText: { color: '#cc3333', fontSize: 15, fontWeight: '600' },
-  backLink: { color: '#01696f', fontSize: 14, fontWeight: '600', marginBottom: 12 },
-  emptyText: { color: '#888', fontSize: 14, marginTop: 8 },
-  card: {
-    marginTop: 24, padding: 16, borderRadius: 12,
-    backgroundColor: '#f4f8f8', borderWidth: 1, borderColor: '#d8e7e7',
-  },
-  cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8, color: '#01696f' },
-  cardText: { fontSize: 15, marginBottom: 6, color: '#222' },
-  logMealBtn: {
-  marginTop: 14, backgroundColor: '#01696f',
-  borderRadius: 10, paddingVertical: 12, alignItems: 'center',
-  },
-  logMealBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  container:                { flex: 1, backgroundColor: '#fff' },
+  scroll:                   { padding: 24, paddingBottom: 48 },
+  title:                    { fontSize: 28, fontWeight: 'bold', marginBottom: 8 },
+  subtitle:                 { fontSize: 14, color: '#666', marginBottom: 8, lineHeight: 20 },
+  label:                    { fontSize: 16, fontWeight: '600', marginBottom: 8, marginTop: 16 },
+  optional:                 { fontSize: 13, fontWeight: '400', color: '#999' },
+  pickerBox:                { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, overflow: 'hidden', backgroundColor: '#f4f8f8' },
+  inputLike:                { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 14, backgroundColor: '#fff' },
+  inputLikeText:            { fontSize: 16, color: '#111' },
+  rpeRow:                   { flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 },
+  workoutCard:              { borderWidth: 1, borderColor: '#ddd', borderRadius: 12, padding: 14, marginBottom: 10, backgroundColor: '#fff' },
+  workoutCardSelected:      { borderColor: '#01696f', backgroundColor: '#e8f4f4', borderWidth: 2 },
+  workoutCardRow:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  workoutCardType:          { fontSize: 17, fontWeight: '700', color: '#111' },
+  workoutCardTypeSelected:  { color: '#01696f' },
+  workoutCardDate:          { fontSize: 14, color: '#555', marginBottom: 4 },
+  workoutCardDateSelected:  { color: '#01696f' },
+  workoutCardRpe:           { fontSize: 13, color: '#999' },
+  workoutCardRpeSelected:   { color: '#01696f' },
+  selectedBadge:            { backgroundColor: '#01696f', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+  selectedBadgeText:        { color: '#fff', fontSize: 12, fontWeight: '600' },
+  emptyCard:                { borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 20, alignItems: 'center', backgroundColor: '#fafafa', marginBottom: 8 },
+  emptyText:                { color: '#444', fontSize: 15, fontWeight: '600', marginBottom: 4 },
+  emptySubtext:             { color: '#999', fontSize: 13 },
+  button:                   { marginTop: 24, backgroundColor: '#01696f', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  buttonText:               { color: '#fff', fontSize: 16, fontWeight: '600' },
+  secondaryButton:          { marginTop: 12, borderWidth: 1, borderColor: '#01696f', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  secondaryButtonText:      { color: '#01696f', fontSize: 15, fontWeight: '600' },
+  skipButton:               { marginTop: 12, borderWidth: 1, borderColor: '#cc3333', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  skipButtonText:           { color: '#cc3333', fontSize: 15, fontWeight: '600' },
+  backLink:                 { color: '#01696f', fontSize: 14, fontWeight: '600', marginBottom: 12 },
+  card:                     { marginTop: 24, padding: 16, borderRadius: 12, backgroundColor: '#f4f8f8', borderWidth: 1, borderColor: '#d8e7e7' },
+  cardTitle:                { fontSize: 18, fontWeight: '700', marginBottom: 8, color: '#01696f' },
+  cardText:                 { fontSize: 15, marginBottom: 6, color: '#222' },
 });
