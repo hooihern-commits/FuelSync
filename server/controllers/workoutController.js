@@ -15,7 +15,7 @@ const createWorkout = async (req, res) => {
     const result = await pool.query(
       `INSERT INTO workouts (user_id, planned_type, planned_time, planned_rpe, status)
        VALUES ($1, $2, $3, $4, 'planned') RETURNING *`,
-      [userId, planned_type, planned_time, planned_rpe]
+      [userId, planned_type, planned_time, planned_rpe ?? null]
     );
     res.status(201).json({ message: 'Workout planned!', workout: result.rows[0] });
   } catch (err) {
