@@ -192,6 +192,9 @@ export default function PlanWorkoutScreen() {
 
       const workoutResponse = await api.patch(`/workouts/${selectedWorkoutId}`, payload);
 
+      setPlannedWorkouts(prev => prev.filter(w => String(w.id) !== selectedWorkoutId));
+      setSelectedWorkoutId(null);
+
       const workoutId = workoutResponse.data?.workout?.id ?? selectedWorkoutId;
 
       const suggestionResponse = await api.post('/suggestions/post', { workout_id: workoutId });
@@ -225,6 +228,8 @@ export default function PlanWorkoutScreen() {
             try {
               setLoading(true);
               await api.patch(`/workouts/${selectedWorkoutId}`, { status: 'skipped' });
+              setPlannedWorkouts(prev => prev.filter(w => String(w.id) !== selectedWorkoutId));
+              setSelectedWorkoutId(null);
               setSuggestion(null);
               Alert.alert('Workout Skipped', 'Your workout has been marked as skipped.', [{ text: 'OK' }]);
             } catch (error: any) {
@@ -467,11 +472,11 @@ export default function PlanWorkoutScreen() {
             <Text style={styles.cardTitle}>
               {mode === 'plan' ? '🥗 Pre-Workout Suggestion' : '💪 Post-Workout Suggestion'}
             </Text>
-            <Text style={styles.cardText}>Carbs: {suggestionData.carbs_g ?? '—'} g</Text>
-            <Text style={styles.cardText}>Protein: {suggestionData.protein_g ?? '—'} g</Text>
-            <Text style={styles.cardText}>Hydration: {suggestionData.hydration_ml ?? '—'} ml</Text>
-            {suggestionData.notes && (
-              <Text style={styles.cardText}>Notes: {suggestionData.notes}</Text>
+            <Text style={styles.cardText}>Carbs: {suggestionData.suggested_carbs ?? '—'} g</Text>
+            <Text style={styles.cardText}>Protein: {suggestionData.suggested_protein ?? '—'} g</Text>
+            <Text style={styles.cardText}>Calories: {suggestionData.suggested_calories ?? '—'} ml</Text>
+            {suggestionData.text && (
+              <Text style={styles.cardText}>Notes: {suggestionData.text}</Text>
             )}
           </View>
         )}
