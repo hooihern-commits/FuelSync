@@ -46,6 +46,12 @@ export default function AppLayout() {
           tabBarIcon: ({ color, size }) => <Ionicons name="heart-outline" size={size} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="[workoutDetail]"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
