@@ -5,7 +5,7 @@ const computeRecoveryScore = ({ energy_level, muscle_soreness, sleep_quality, ov
   // Subjective: 60 points max
   const subjective =
     (energy_level / 5) * 25 +
-    ((6 - muscle_soreness) / 5) * 15 +   // inverted: less sore = better
+    (muscle_soreness / 5) * 15 +   // inverted: less sore = better
     (sleep_quality / 5) * 10 +
     (overall_feeling / 5) * 10;
 
