@@ -25,9 +25,9 @@ interface CompletedWorkout {
 
 const SLIDER_LABELS: Record<string, string[]> = {
   sleep_quality:   ['Terrible', 'Poor', 'Fair', 'Good', 'Excellent'],
-  muscle_soreness: ['Severe',    'Significant', 'Moderate', 'Mild', 'None'],
-  energy_level:    ['Exhausted','Low',  'Moderate', 'Good',        'High'],
-  overall_feeling: ['Terrible', 'Poor', 'Fair',     'Good',        'Great'],
+  muscle_soreness: ['Very Sore', 'Sore', 'Moderate', 'Good', 'Fully Recovered'],
+  energy_level:    ['Exhausted','Low',  'Moderate', 'Good', 'High'],
+  overall_feeling: ['Terrible', 'Poor', 'Fair', 'Good', 'Great'],
 };
 
 const SLIDER_EMOJIS: Record<string, string[]> = {
@@ -237,7 +237,7 @@ export default function CheckinScreen() {
 
   <View style={styles.sliderCard}>
     <View style={styles.sliderHeader}>
-      <Text style={styles.sliderLabel}>💪  Muscle Soreness</Text>
+      <Text style={styles.sliderLabel}>💪  Muscle Recovery</Text>
       <View style={styles.sliderBadge}>
         <Text style={styles.sliderEmoji}>{SLIDER_EMOJIS.muscle_soreness[muscleSoreness - 1]}</Text>
         <Text style={styles.sliderBadgeText}>{SLIDER_LABELS.muscle_soreness[muscleSoreness - 1]}</Text>
