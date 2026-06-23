@@ -13,6 +13,8 @@ import {
 import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
 import api from '../../src/api/client';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 interface CompletedWorkout {
   id: number;
@@ -162,15 +164,16 @@ export default function CheckinScreen() {
 
   if (loadingWorkouts) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#01696f" />
+      <SafeAreaView  style={styles.centered}>
+        <ActivityIndicator size="large" color="#01696f" style={{ marginTop: 48 }} />
         <Text style={styles.loadingText}>Loading workouts…</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (workouts.length === 0) {
     return (
+      <SafeAreaView style={styles.container} >
       <View style={styles.centered}>
         <Text style={styles.emptyEmoji}>🏅</Text>
         <Text style={styles.emptyTitle}>No Workouts to Check In</Text>
@@ -181,15 +184,13 @@ export default function CheckinScreen() {
           <Text style={styles.buttonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
+    </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
+    <SafeAreaView style={styles.container}>
+    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" >
       <View style={styles.header}>
         <Text style={styles.title}>Recovery Check-In</Text>
         <Text style={styles.subtitle}>How did your body respond to yesterday's session?</Text>
@@ -300,6 +301,7 @@ export default function CheckinScreen() {
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

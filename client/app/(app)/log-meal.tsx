@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { analyzeFoodPhoto, FoodScanResult } from '../../src/api/foodAI';
 import apiClient from '../../src/api/client';
 import { useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type MealType = 'pre_workout' | 'post_workout' | 'general';
 
@@ -125,8 +126,10 @@ export default function LogMealScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Log Meal</Text>
+    <SafeAreaView  style={styles.container} >
+      <ScrollView contentContainerStyle={styles.content}>
+      <Text style={styles.title}>Log Meal</Text>
+      <Text style={styles.subtitle}>Track what you eat around your workouts.</Text>
 
       {/* Meal Type Toggle */}
       <View style={styles.pillRow}>
@@ -185,12 +188,8 @@ export default function LogMealScreen() {
         <Text style={styles.label}>Meal Name</Text>
         <TextInput style={styles.input} value={mealName} onChangeText={setMealName} placeholder="e.g. Chicken rice" multiline />
 
-        <View style={styles.row}>
-          <View style={styles.halfField}>
-            <Text style={styles.label}>Calories (kcal)</Text>
-            <TextInput style={styles.input} value={calories} onChangeText={setCalories} keyboardType="numeric" placeholder="0" />
-          </View>
-        </View>
+        <Text style={styles.label}>Calories (kcal)</Text>
+        <TextInput style={styles.input} value={calories} onChangeText={setCalories} keyboardType="numeric" placeholder="0" />
 
         <View style={styles.row}>
           <View style={styles.thirdField}>
@@ -228,14 +227,16 @@ export default function LogMealScreen() {
           : <Text style={styles.submitBtnText}>Log Meal</Text>
         }
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 20, paddingBottom: 60 },
-  heading: { fontSize: 24, fontWeight: '700', color: '#01696f', marginBottom: 20 },
+  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 6 },
+  subtitle: { fontSize: 14, color: '#666', marginBottom: 20 },
   pillRow: { flexDirection: 'row', backgroundColor: '#f4f8f8', borderRadius: 10, padding: 4, marginBottom: 20 },
   pill: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
   pillActive: { backgroundColor: '#01696f' },
@@ -253,7 +254,6 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, color: '#666', marginBottom: 4, marginTop: 10 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 14, fontSize: 14, backgroundColor: '#fff', minHeight: 48,textAlignVertical: 'top' },
   row: { flexDirection: 'row', gap: 10 },
-  halfField: { flex: 1 },
   thirdField: { flex: 1 },
   submitBtn: { backgroundColor: '#01696f', borderRadius: 10, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
   submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
