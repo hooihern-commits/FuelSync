@@ -70,6 +70,7 @@ export default function PlanWorkoutScreen() {
 
   const switchMode = async (next: Mode) => {
     setSuggestion(null);
+    setSelectedWorkoutId(null);
     setMode(next);
     if (next === 'update') {
       try {
@@ -93,8 +94,11 @@ export default function PlanWorkoutScreen() {
       setSuggestion(null);
 
       const data      = await planWorkout(workoutType, plannedTime, plannedRpe);
-      const workoutId = data?.workout?.id ?? data?.id ?? data?.workout_id;
-      if (!workoutId) throw new Error('Workout created but no ID returned.');
+      const workoutId = data?.workout?.id ?? data?.id;
+      if (!workoutId) {
+        console.error('Unexpected planWorkout response shape:', JSON.stringify(data));
+        throw new Error('Workout created but no ID returned. Check console for response shape.');
+      }
 
       const suggestionData = await getPreSuggestion(workoutId);
       setSuggestion(suggestionData);
@@ -126,8 +130,11 @@ export default function PlanWorkoutScreen() {
       setSuggestion(null);
 
       const data      = await logWorkout(payload);
-      const workoutId = data?.workout?.id ?? data?.id ?? data?.workout_id;
-      if (!workoutId) throw new Error('Workout logged but no ID returned.');
+      const workoutId = data?.workout?.id ?? data?.id;
+      if (!workoutId) {
+        console.error('Unexpected logWorkout response shape:', JSON.stringify(data));
+        throw new Error('Workout logged but no ID returned. Check console for response shape.');
+      }
       const suggestionData = await getPostSuggestion(workoutId);
       setSuggestion(suggestionData);
       Alert.alert('Workout Logged!', `Total training time: ${data?.duration_mins} minutes.`, [{ text: 'Got it' }]);
@@ -444,7 +451,7 @@ export default function PlanWorkoutScreen() {
             <View style={styles.ringsRow}>
               <NutrientRec
                 value={suggestionData.suggested_calories ?? null}
-                unit="ml"
+                unit="kcal"
                 label="Calories"
                 color="#cc3333"
               />

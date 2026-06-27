@@ -36,9 +36,8 @@ export default function WorkoutDetailScreen() {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const res   = await api.get('/workouts');
-        const found = (res.data.workouts ?? []).find((w: any) => String(w.id) === workoutDetail);
-        setWorkout(found ?? null);
+        const res = await api.get(`/workouts/${workoutDetail}`);
+        setWorkout(res.data.workout ?? res.data ?? null);
       } catch (err: any) {
         console.error('WorkoutDetail fetch error:', err.response?.data || err.message);
       } finally {

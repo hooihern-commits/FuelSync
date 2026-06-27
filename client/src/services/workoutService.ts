@@ -43,12 +43,12 @@ export const updateWorkout = async (
 };
 
 export const skipWorkout = async (id: string) => {
-  const response = await api.patch(`/workouts/${id}`, { status: 'skipped' });
+  const response = await api.post(`/workouts/${id}/skip`);
   return response.data;
 };
 
 export const fetchPlannedWorkouts = async () => {
-  const response = await api.get('/workouts/planned');
+  const response = await api.get('/workouts', { params: { status: 'planned' } });
   return response.data.workouts ?? [];
 };
 
