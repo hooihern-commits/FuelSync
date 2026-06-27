@@ -101,7 +101,7 @@ export default function LogMealScreen() {
     }
     setSubmitting(true);
     try {
-      await apiClient.post('/meals/log', {
+      await apiClient.post('/meals', {
         meal_type: mealType,
         meal_name: mealName,
         calories_kcal: parseFloat(calories) || 0,
@@ -118,7 +118,8 @@ export default function LogMealScreen() {
       setImageUri(null);
       setMealName(''); setCalories(''); setCarbs('');
       setProtein(''); setFat(''); setNotes(''); setConfidence(null);
-    } catch (e) {
+    } catch (e: any) {
+      console.log('Log meal error:', JSON.stringify(e?.response?.data ?? e?.message ?? e));
       Alert.alert('Error', 'Failed to log meal. Please try again.');
     } finally {
       setSubmitting(false);
