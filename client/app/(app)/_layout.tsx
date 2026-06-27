@@ -52,6 +52,12 @@ export default function AppLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="nutrientrec"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
