@@ -7,7 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import Slider from '@react-native-community/slider';
-import api from '../../src/api/client';
+import NutrientRec from './nutrientrec';
+import { validateTimes, buildWorkoutPayload } from '../../src/utils/workoutUtils';
+import {
+  planWorkout, logWorkout, updateWorkout, skipWorkout,
+  fetchPlannedWorkouts, getPreSuggestion, getPostSuggestion,
+} from '../../src/services/workoutService';
 
 type Mode = 'plan' | 'log' | 'update';
 
@@ -63,34 +68,22 @@ export default function PlanWorkoutScreen() {
     if (date) setEndTime(date);
   };
 
-  // ── Helpers ───────────────────────────────────────────────
-  const validateTimes = (): boolean => {
-    if (endTime <= startTime) {
-      Alert.alert('Invalid Times', 'End time must be after start time.');
-      return false;
-    }
-    return true;
-  };
-
-  const fetchPlannedWorkouts = async () => {
-    try {
-      setLoadingPlanned(true);
-      const res = await api.get('/workouts/planned');
-      const workouts = res.data.workouts ?? [];
-      setPlannedWorkouts(workouts);
-      if (workouts.length > 0) setSelectedWorkoutId(String(workouts[0].id));
-    } catch (err: any) {
-      console.error('fetchPlannedWorkouts error:', err.response?.data || err.message);
-      Alert.alert('Error', 'Could not load planned workouts.');
-    } finally {
-      setLoadingPlanned(false);
-    }
-  };
-
-  const switchMode = (next: Mode) => {
+  const switchMode = async (next: Mode) => {
     setSuggestion(null);
     setMode(next);
-    if (next === 'update') fetchPlannedWorkouts();
+    if (next === 'update') {
+      try {
+        setLoadingPlanned(true);
+        const workouts = await fetchPlannedWorkouts();
+        setPlannedWorkouts(workouts);
+        if (workouts.length > 0) setSelectedWorkoutId(String(workouts[0].id));
+      } catch (err: any) {
+        console.error('fetchPlannedWorkouts error:', err.response?.data || err.message);
+        Alert.alert('Error', 'Could not load planned workouts.');
+      } finally {
+        setLoadingPlanned(false);
+      }
+    }
   };
 
   // ── Submit: plan ──────────────────────────────────────────
@@ -99,21 +92,12 @@ export default function PlanWorkoutScreen() {
       setLoading(true);
       setSuggestion(null);
 
-      const workoutResponse = await api.post('/workouts', {
-        planned_type: workoutType,
-        planned_time: plannedTime.toISOString(),
-        planned_rpe:  plannedRpe,
-      });
-
-      const workoutId =
-        workoutResponse.data?.workout?.id ??
-        workoutResponse.data?.id ??
-        workoutResponse.data?.workout_id;
-
+      const data      = await planWorkout(workoutType, plannedTime, plannedRpe);
+      const workoutId = data?.workout?.id ?? data?.id ?? data?.workout_id;
       if (!workoutId) throw new Error('Workout created but no ID returned.');
 
-      const suggestionResponse = await api.post('/suggestions/pre', { workout_id: workoutId });
-      setSuggestion(suggestionResponse.data);
+      const suggestionData = await getPreSuggestion(workoutId);
+      setSuggestion(suggestionData);
 
       Alert.alert(
         'Workout Planned!',
@@ -130,36 +114,23 @@ export default function PlanWorkoutScreen() {
 
   // ── Submit: log unplanned ─────────────────────────────────
   const handleLogSubmit = async () => {
-    if (!validateTimes()) return;
+    if (!validateTimes(startTime, endTime)) {
+      Alert.alert('Invalid Times', 'End time must be after start time.');
+      return;
+    }
 
-    const payload = {
-      actual_type:       logType,
-      actual_start_time: startTime.toISOString(),
-      actual_end_time:   endTime.toISOString(),
-      actual_rpe:        actualRpe,
-      heart_rate_avg:    heartRate ? Number(heartRate) : null,
-      calories_burned:   calories  ? Number(calories)  : null,
-      data_source:       'manual',
-    };
+    const payload = buildWorkoutPayload(logType, startTime, endTime, actualRpe, heartRate, calories);
 
     try {
       setLoading(true);
       setSuggestion(null);
 
-      const workoutResponse = await api.post('/workouts/log', payload);
-
-      const workoutId =
-        workoutResponse.data?.workout?.id ??
-        workoutResponse.data?.id ??
-        workoutResponse.data?.workout_id;
-
+      const data      = await logWorkout(payload);
+      const workoutId = data?.workout?.id ?? data?.id ?? data?.workout_id;
       if (!workoutId) throw new Error('Workout logged but no ID returned.');
-
-      const suggestionResponse = await api.post('/suggestions/post', { workout_id: workoutId });
-      setSuggestion(suggestionResponse.data);
-
-      const duration = workoutResponse.data?.duration_mins;
-      Alert.alert('Workout Logged!', `Total training time: ${duration} minutes.`, [{ text: 'Got it' }]);
+      const suggestionData = await getPostSuggestion(workoutId);
+      setSuggestion(suggestionData);
+      Alert.alert('Workout Logged!', `Total training time: ${data?.duration_mins} minutes.`, [{ text: 'Got it' }]);
     } catch (error: any) {
       console.error('handleLogSubmit error:', error.response?.data || error.message);
       Alert.alert('Error', error.response?.data?.error || error.message || 'Something went wrong');
@@ -174,34 +145,27 @@ export default function PlanWorkoutScreen() {
       Alert.alert('No workout selected', 'Please select a planned workout.');
       return;
     }
-    if (!validateTimes()) return;
+    if (!validateTimes(startTime, endTime)) {
+      Alert.alert('Invalid Times', 'End time must be after start time.');
+      return;
+    }
 
-    const payload = {
-      actual_type:       logType,
-      actual_start_time: startTime.toISOString(),
-      actual_end_time:   endTime.toISOString(),
-      actual_rpe:        actualRpe,
-      heart_rate_avg:    heartRate ? Number(heartRate) : null,
-      calories_burned:   calories  ? Number(calories)  : null,
-      data_source:       'manual',
-    };
+    const payload = buildWorkoutPayload(logType, startTime, endTime, actualRpe, heartRate, calories);
 
     try {
       setLoading(true);
       setSuggestion(null);
 
-      const workoutResponse = await api.patch(`/workouts/${selectedWorkoutId}`, payload);
+      const data      = await updateWorkout(selectedWorkoutId, payload);
+      const workoutId = data?.workout?.id ?? selectedWorkoutId;
 
       setPlannedWorkouts(prev => prev.filter(w => String(w.id) !== selectedWorkoutId));
       setSelectedWorkoutId(null);
 
-      const workoutId = workoutResponse.data?.workout?.id ?? selectedWorkoutId;
+      const suggestionData = await getPostSuggestion(workoutId);
+      setSuggestion(suggestionData);
 
-      const suggestionResponse = await api.post('/suggestions/post', { workout_id: workoutId });
-      setSuggestion(suggestionResponse.data);
-
-      const duration = workoutResponse.data?.duration_mins;
-      Alert.alert('Workout Updated!', `Total training time: ${duration} minutes.`, [{ text: 'Got it' }]);
+      Alert.alert('Workout Updated!', `Total training time: ${data?.duration_mins} minutes.`, [{ text: 'Got it' }]);
     } catch (error: any) {
       console.error('handleUpdateSubmit error:', error.response?.data || error.message);
       Alert.alert('Error', error.response?.data?.error || error.message || 'Something went wrong');
@@ -227,10 +191,11 @@ export default function PlanWorkoutScreen() {
           onPress: async () => {
             try {
               setLoading(true);
-              await api.patch(`/workouts/${selectedWorkoutId}`, { status: 'skipped' });
+              await skipWorkout(selectedWorkoutId);
               setPlannedWorkouts(prev => prev.filter(w => String(w.id) !== selectedWorkoutId));
               setSelectedWorkoutId(null);
               setSuggestion(null);
+
               Alert.alert('Workout Skipped', 'Your workout has been marked as skipped.', [{ text: 'OK' }]);
             } catch (error: any) {
               console.error('handleDidntDoWorkout error:', error.response?.data || error.message);
@@ -469,14 +434,39 @@ export default function PlanWorkoutScreen() {
         {/* ── SUGGESTION CARD ──────────────────────────── */}
         {suggestionData && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>
-              {mode === 'plan' ? '🥗 Pre-Workout Suggestion' : '💪 Post-Workout Suggestion'}
-            </Text>
-            <Text style={styles.cardText}>Carbs: {suggestionData.suggested_carbs ?? '—'} g</Text>
-            <Text style={styles.cardText}>Protein: {suggestionData.suggested_protein ?? '—'} g</Text>
-            <Text style={styles.cardText}>Calories: {suggestionData.suggested_calories ?? '—'} ml</Text>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>
+                {mode === 'plan' ? 'Pre-Workout Suggestion' : 'Post-Workout Suggestion'}
+              </Text>
+              <Text style={styles.cardTimestamp}>Just now</Text>
+            </View>
+
+            <View style={styles.ringsRow}>
+              <NutrientRec
+                value={suggestionData.suggested_calories ?? null}
+                unit="ml"
+                label="Calories"
+                color="#cc3333"
+              />
+              <NutrientRec
+                value={suggestionData.suggested_protein ?? null}
+                unit="g"
+                label="Protein"
+                color="#01696f"
+              />
+              <NutrientRec
+                value={suggestionData.suggested_carbs ?? null}
+                unit="g"
+                label="Carbs"
+                color="#d99a1b"
+              />
+            </View>
+
             {suggestionData.text && (
-              <Text style={styles.cardText}>Notes: {suggestionData.text}</Text>
+              <View style={styles.tipBox}>
+                <Text style={styles.tipIcon}>💡</Text>
+                <Text style={styles.tipText}>{suggestionData.text}</Text>
+              </View>
             )}
           </View>
         )}
@@ -518,7 +508,12 @@ const styles = StyleSheet.create({
   skipButton:               { marginTop: 12, borderWidth: 1, borderColor: '#cc3333', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   skipButtonText:           { color: '#cc3333', fontSize: 15, fontWeight: '600' },
   backLink:                 { color: '#01696f', fontSize: 14, fontWeight: '600', marginBottom: 12 },
-  card:                     { marginTop: 24, padding: 16, borderRadius: 12, backgroundColor: '#f4f8f8', borderWidth: 1, borderColor: '#d8e7e7' },
-  cardTitle:                { fontSize: 18, fontWeight: '700', marginBottom: 8, color: '#01696f' },
-  cardText:                 { fontSize: 15, marginBottom: 6, color: '#222' },
+  card:                     { marginTop: 24, padding: 18, borderRadius: 16, backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  cardHeaderRow:            { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  cardTitle:                { fontSize: 17, fontWeight: '700', color: '#111' },
+  cardTimestamp:            { fontSize: 12, color: '#999' },
+  ringsRow:                 { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
+  tipBox:                   { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#f4f8f8', borderRadius: 12, padding: 12, gap: 8 },
+  tipIcon:                  { fontSize: 16 },
+  tipText:                  { flex: 1, fontSize: 13, color: '#444', lineHeight: 18 },
 });
