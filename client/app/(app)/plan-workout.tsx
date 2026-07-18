@@ -13,6 +13,7 @@ import {
   planWorkout, logWorkout, updateWorkout, skipWorkout,
   fetchPlannedWorkouts, getPreSuggestion, getPostSuggestion,
 } from '../../src/services/workoutService';
+import { scheduleRecoveryCheckinReminder } from '../../src/services/notifications';
 
 type Mode = 'plan' | 'log' | 'update';
 
@@ -135,6 +136,9 @@ export default function PlanWorkoutScreen() {
         console.error('Unexpected logWorkout response shape:', JSON.stringify(data));
         throw new Error('Workout logged but no ID returned. Check console for response shape.');
       }
+
+      await scheduleRecoveryCheckinReminder(workoutId);
+
       const suggestionData = await getPostSuggestion(workoutId);
       setSuggestion(suggestionData);
       Alert.alert('Workout Logged!', `Total training time: ${data?.duration_mins} minutes.`, [{ text: 'Got it' }]);
@@ -165,6 +169,8 @@ export default function PlanWorkoutScreen() {
 
       const data      = await updateWorkout(selectedWorkoutId, payload);
       const workoutId = data?.workout?.id ?? selectedWorkoutId;
+
+      await scheduleRecoveryCheckinReminder(workoutId);
 
       setPlannedWorkouts(prev => prev.filter(w => String(w.id) !== selectedWorkoutId));
       setSelectedWorkoutId(null);

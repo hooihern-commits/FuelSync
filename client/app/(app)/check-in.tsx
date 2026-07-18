@@ -14,7 +14,7 @@ import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
 import api from '../../src/api/client';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { clearPendingCheckinFlag } from '../../src/services/notifications';
 
 interface CompletedWorkout {
   id: number;
@@ -103,6 +103,9 @@ export default function CheckinScreen() {
       });
 
       const { recovery_score } = res.data;
+
+      await clearPendingCheckinFlag(); 
+      
       Alert.alert(
         'Check-In Saved! 🎉',
         `Your recovery score is ${recovery_score}/100 — ${getScoreLabel(recovery_score)}.`,

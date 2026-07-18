@@ -1,7 +1,14 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect } from 'react';
+import { initTimezoneChangeWatcher } from '../../src/services/notifications';
 
 export default function AppLayout() {
+  useEffect(() => {
+  const cleanup = initTimezoneChangeWatcher();
+  return cleanup;
+}, []);
+
   return (
     <Tabs
       screenOptions={{
