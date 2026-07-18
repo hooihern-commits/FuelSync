@@ -1,4 +1,5 @@
 const pool = require('../db');
+const { DateTime } = require('luxon');
 
 // Score formula: 0–100
 const computeRecoveryScore = ({ energy_level, muscle_soreness, sleep_quality, overall_feeling, resting_hr, hrv_score, baselineHR }) => {
@@ -42,6 +43,8 @@ const submitCheckin = async (req, res) => {
       energy_level, muscle_soreness, sleep_quality, overall_feeling,
       resting_hr, hrv_score, baselineHR
     });
+
+    const checkinDate = DateTime.now().setZone(req.timezone).toISODate();
 
     const result = await pool.query(
       `INSERT INTO recovery_checkins

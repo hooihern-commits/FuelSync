@@ -5,6 +5,9 @@ const app = express();
 
 app.use(express.json());
 
+const { attachTimezone } = require('./middleware/timezone');
+app.use(attachTimezone);
+
 // Routes
 app.use('/auth',        require('./routes/auth'));
 app.use('/meals',       require('./routes/meals'));
