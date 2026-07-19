@@ -138,7 +138,13 @@ const preWorkoutAdvice = async (req, res) => {
     );
     if (workout.rows.length === 0) return res.status(404).json({ error: 'Workout not found.' });
 
-    const userRes = await pool.query('SELECT weight, goal FROM users WHERE id=$1', [userId]);
+    const userRes = await pool.query(
+      `SELECT u.goal,
+              (SELECT bm.weight_kg FROM body_metrics bm
+               WHERE bm.user_id = u.id ORDER BY bm.logged_at DESC LIMIT 1) AS weight
+       FROM users u WHERE u.id = $1`,
+      [userId]
+    );
     const mealProfile = await getMealProfile(userId);
 
     const { advice, source, predicted_recovery } = await getAdvice({
@@ -169,7 +175,13 @@ const postWorkoutAdvice = async (req, res) => {
       return res.status(400).json({ error: 'Complete the workout first via PATCH /workouts/:id.' });
     }
 
-    const userRes = await pool.query('SELECT weight, goal FROM users WHERE id=$1', [userId]);
+    const userRes = await pool.query(
+      `SELECT u.goal,
+              (SELECT bm.weight_kg FROM body_metrics bm
+               WHERE bm.user_id = u.id ORDER BY bm.logged_at DESC LIMIT 1) AS weight
+       FROM users u WHERE u.id = $1`,
+      [userId]
+    );
     const mealProfile = await getMealProfile(userId);
 
     const { advice, source, predicted_recovery } = await getAdvice({

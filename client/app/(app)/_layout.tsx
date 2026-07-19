@@ -1,6 +1,7 @@
 import { Tabs, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
+import * as Notifications from 'expo-notifications';
 import { initTimezoneChangeWatcher } from '../../src/services/notifications';
 import { getUser, StoredUser } from '../../src/storage/user';
 
@@ -11,6 +12,17 @@ export default function AppLayout() {
   const cleanup = initTimezoneChangeWatcher();
   return cleanup;
 }, []);
+
+  // Tapping the recovery-check-in reminder opens the Check-in screen.
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+      if (data?.type === 'recovery_checkin') {
+        router.push('/(app)/check-in');
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
 useEffect(() => {
   getUser().then(setUser);

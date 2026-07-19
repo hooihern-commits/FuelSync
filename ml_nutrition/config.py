@@ -9,8 +9,11 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Load the same .env the Node server uses (repo root), if present.
+# The Node server keeps its .env in server/ (that's where DATABASE_URL lives),
+# so load that first; fall back to a repo-root .env if one exists. load_dotenv
+# does not override already-set vars, so the first file to define a key wins.
 ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(ROOT / "server" / ".env")
 load_dotenv(ROOT / ".env")
 
 # --------------------------------------------------------------------------

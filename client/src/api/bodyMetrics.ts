@@ -17,7 +17,7 @@ export async function getLatestMetrics() {
   return res.data;
 }
 
-export async function completeOnboarding() {
-  const res = await api.patch('/users/onboarding');
+export async function completeOnboarding(age?: number) {
+  const res = await api.patch('/users/onboarding', age != null ? { age } : {});
   return res.data;
 }

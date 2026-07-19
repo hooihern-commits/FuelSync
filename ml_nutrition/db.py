@@ -56,7 +56,9 @@ SELECT
   w.duration_mins                                AS duration_mins,
   w.heart_rate_avg                               AS heart_rate_avg,
   w.calories_burned                              AS calories_burned,
-  u.weight                                       AS weight,
+  (SELECT bm.weight_kg FROM body_metrics bm
+   WHERE bm.user_id = w.user_id
+   ORDER BY bm.logged_at DESC LIMIT 1)           AS weight,
   SUM(m.{cols['carbs']})                         AS carbs_g,
   SUM(m.{cols['protein']})                       AS protein_g,
   SUM(m.{cols['fats']})                          AS fat_g,
@@ -68,7 +70,7 @@ JOIN suggestions s        ON s.workout_id = w.id
 JOIN meals m              ON m.suggestion_id = s.id
 GROUP BY w.user_id, workout_type, s.phase, u.goal,
          rpe, w.duration_mins, w.heart_rate_avg, w.calories_burned,
-         u.weight, rc.recovery_score
+         rc.recovery_score
 """
 
 
@@ -98,7 +100,12 @@ def get_user_context(user_id: int) -> Dict:
         with _connect() as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(
-                    "SELECT weight, goal FROM users WHERE id = %s", (user_id,)
+                    """SELECT u.goal,
+                              (SELECT bm.weight_kg FROM body_metrics bm
+                               WHERE bm.user_id = u.id
+                               ORDER BY bm.logged_at DESC LIMIT 1) AS weight
+                       FROM users u WHERE u.id = %s""",
+                    (user_id,),
                 )
                 row = cur.fetchone()
     except Exception as exc:  # noqa: BLE001

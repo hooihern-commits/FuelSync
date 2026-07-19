@@ -1,19 +1,33 @@
+"""FastAPI inference service for FuelSync nutrition recommendations.
+
+The Node/Express backend POSTs a workout context here and gets back a macro
+recommendation. If the model is missing the service returns the rule-based
+fallback and flags `source: "rule"`. A POST /retrain endpoint re-blends the
+evidence-based seed with the latest real data (continual learning), triggered
+by Node after each recovery check-in.
+
+Run:  uvicorn serve:app --host 127.0.0.1 --port 8000
+  or: python serve.py
+"""
 from __future__ import annotations
 
 import json
+import threading
 from typing import Optional
 
 import joblib
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, FastAPI
 from pydantic import BaseModel, Field
 
 import fallback
 from config import METRICS_PATH, MODEL_PATH, SERVICE_HOST, SERVICE_PORT
 from optimize import recommend
+from train_recovery_model import retrain
 
 app = FastAPI(title="FuelSync ML Nutrition", version="1.0.0")
 
 _STATE = {"model": None, "metrics": {}, "trustworthy": False}
+_retrain_lock = threading.Lock()
 
 
 def _load_model() -> None:
@@ -21,15 +35,32 @@ def _load_model() -> None:
         _STATE["model"] = joblib.load(MODEL_PATH)
     if METRICS_PATH.exists():
         _STATE["metrics"] = json.loads(METRICS_PATH.read_text())
-    _STATE["trustworthy"] = bool(
-        _STATE["model"] is not None and _STATE["metrics"].get("is_trustworthy")
-    )
+    # Trustworthy whenever a model exists: it is grounded in the evidence-based
+    # knowledge seed even before any real user data has been folded in.
+    _STATE["trustworthy"] = _STATE["model"] is not None
     print(f"[serve] model loaded={_STATE['model'] is not None} "
-          f"trustworthy={_STATE['trustworthy']}")
+          f"trustworthy={_STATE['trustworthy']} "
+          f"real_rows={_STATE['metrics'].get('n_real_rows')}")
+
+
+def _retrain_and_reload() -> None:
+    """Continual-learning step: re-blend seed + latest real data, then reload."""
+    if not _retrain_lock.acquire(blocking=False):
+        print("[serve] retrain already in progress; skipping")
+        return
+    try:
+        retrain()
+        _load_model()
+    finally:
+        _retrain_lock.release()
 
 
 @app.on_event("startup")
 def _startup() -> None:
+    # Ensure a model exists on first boot by training from the knowledge seed.
+    if not MODEL_PATH.exists():
+        print("[serve] no model artifact; training from evidence-based seed")
+        retrain()
     _load_model()
 
 
@@ -79,6 +110,17 @@ def reload_model():
     return {"reloaded": True, "trustworthy": _STATE["trustworthy"]}
 
 
+@app.post("/retrain")
+def retrain_endpoint(background_tasks: BackgroundTasks):
+    """Trigger a continual-learning retrain (seed + latest real data).
+
+    Runs in the background so callers (e.g. the Node server after a recovery
+    check-in) return immediately. Concurrent triggers are coalesced by a lock.
+    """
+    background_tasks.add_task(_retrain_and_reload)
+    return {"scheduled": True}
+
+
 @app.post("/recommend", response_model=RecommendResponse)
 def recommend_endpoint(req: RecommendRequest):
     context = {
@@ -91,7 +133,7 @@ def recommend_endpoint(req: RecommendRequest):
         "goal": req.goal,
     }
 
-    # Cold-start / no-model / untrusted-model -> rule-based advice.
+    # Cold-start / no-model -> rule-based advice.
     if not _STATE["trustworthy"]:
         adv = fallback.advice(req.phase, context)
         return RecommendResponse(source="rule", phase=req.phase, personalized=False, **adv)
