@@ -44,6 +44,8 @@ const submitCheckin = async (req, res) => {
       resting_hr, hrv_score, baselineHR
     });
 
+    const checkinDate = DateTime.now().setZone(req.timezone).toISODate();
+
     const result = await pool.query(
       `INSERT INTO recovery_checkins
         (user_id, workout_id, energy_level, muscle_soreness, sleep_quality, overall_feeling,

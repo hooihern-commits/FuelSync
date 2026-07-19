@@ -56,7 +56,14 @@
           "photosPermission": "FuelSync needs photo library access to import meal photos."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-localization",
+      [
+        "expo-notifications",
+        {
+          "color": "#01696f"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
