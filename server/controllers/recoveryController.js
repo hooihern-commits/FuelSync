@@ -1,4 +1,5 @@
 const pool = require('../db');
+const { triggerRetrain } = require('../services/mlClient');
 
 // Score formula: 0–100
 const computeRecoveryScore = ({ energy_level, muscle_soreness, sleep_quality, overall_feeling, resting_hr, hrv_score, baselineHR }) => {
