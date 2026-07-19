@@ -13,8 +13,8 @@ const NUTRITION_PROMPT = `You are a sports nutritionist AI. Analyze this food im
   "confidence": "high"
 }
 Rules:
-- Assume athlete-sized portions (active person, 70-80kg)
-- hydration_ml: estimate only if there is a visible drink, otherwise return 0
+- Assume a single standard portion for one person
+- Do NOT double-count ingredients already part of a composite dish
 - confidence: "high" if food is clearly visible, "medium" if partially obscured, "low" if unclear
 - All numeric values must be numbers, not strings`;
 

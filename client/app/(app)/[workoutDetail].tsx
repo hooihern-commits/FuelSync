@@ -5,18 +5,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../src/api/client';
+import {
+  capitalizeWorkoutType,
+  getStatusColor,
+  getStatusLabel,
+  formatDuration,
+  formatHeartRate,
+  formatCalories,
+  formatRpe,
+  isCompletedWorkout,
+} from '../../src/utils/workoutUtils';
 
-const STATUS_COLORS: Record<string, string> = {
-  completed: '#01696f',
-  planned:   '#f0a500',
-  skipped:   '#cc3333',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  completed: 'Completed',
-  planned:   'Planned',
-  skipped:   'Skipped',
-};
 
 const Row = ({ label, value }: { label: string; value: string | number | null | undefined }) => {
   if (value == null || value === '') return null;
@@ -37,9 +36,8 @@ export default function WorkoutDetailScreen() {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const res   = await api.get('/workouts');
-        const found = (res.data.workouts ?? []).find((w: any) => String(w.id) === workoutDetail);
-        setWorkout(found ?? null);
+        const res = await api.get(`/workouts/${workoutDetail}`);
+        setWorkout(res.data.workout ?? res.data ?? null);
       } catch (err: any) {
         console.error('WorkoutDetail fetch error:', err.response?.data || err.message);
       } finally {
@@ -79,10 +77,10 @@ export default function WorkoutDetailScreen() {
   }
 
   const typeLabel   = workout.actual_type ?? workout.planned_type ?? 'Workout';
-  const displayType = typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1);
-  const statusColor = STATUS_COLORS[workout.status] ?? '#888';
-  const statusLabel = STATUS_LABELS[workout.status] ?? workout.status;
-  const isCompleted = workout.status === 'completed';
+  const displayType = capitalizeWorkoutType(typeLabel);
+  const statusColor = getStatusColor(workout.status);
+  const statusLabel = getStatusLabel(workout.status);
+  const isCompleted = isCompletedWorkout(workout.status);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -134,10 +132,10 @@ export default function WorkoutDetailScreen() {
             <Row label="Date"            value={fmt(workout.actual_start_time, 'date')} />
             <Row label="Start Time"      value={fmt(workout.actual_start_time, 'time')} />
             <Row label="End Time"        value={fmt(workout.actual_end_time,   'time')} />
-            <Row label="Duration"        value={workout.duration_mins   != null ? `${workout.duration_mins} minutes`   : null} />
-            <Row label="RPE"             value={workout.actual_rpe      != null ? `${workout.actual_rpe} / 10`         : null} />
-            <Row label="Avg Heart Rate"  value={workout.heart_rate_avg  != null ? `${workout.heart_rate_avg} bpm`      : null} />
-            <Row label="Calories Burned" value={workout.calories_burned != null ? `${workout.calories_burned} kcal`    : null} />
+            <Row label="Duration"        value={formatDuration(workout.duration_mins)} />
+            <Row label="RPE"             value={formatRpe(workout.actual_rpe)} />
+            <Row label="Avg Heart Rate"  value={formatHeartRate(workout.heart_rate_avg)} />
+            <Row label="Calories Burned" value={formatCalories(workout.calories_burned)} />
             <Row label="Data Source"     value={workout.data_source} />
             <Row label="Notes"           value={workout.notes} />
           </View>
