@@ -468,3 +468,12 @@ $RECYCLE.BIN/
 /media/
 
 # End of https://www.toptal.com/developers/gitignore/api/windows
+
+# Claude Code local settings (do not commit)
+.claude/
+
+# Python / ML service artifacts
+ml_nutrition/.venv/
+ml_nutrition/__pycache__/
+ml_nutrition/model/
+ml_nutrition/data/

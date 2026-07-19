@@ -1,0 +1,7 @@
+# Trained model artifacts and generated data
+model/
+data/
+__pycache__/
+*.pyc
+.venv/
+venv/
