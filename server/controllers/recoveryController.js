@@ -1,4 +1,5 @@
 const pool = require('../db');
+const { triggerRetrain } = require('../services/mlClient');
 
 // Score formula: 0–100
 const computeRecoveryScore = ({ energy_level, muscle_soreness, sleep_quality, overall_feeling, resting_hr, hrv_score, baselineHR }) => {
@@ -14,7 +15,7 @@ const computeRecoveryScore = ({ energy_level, muscle_soreness, sleep_quality, ov
   if (resting_hr && baselineHR && hrv_score) {
     const hrScore = Math.max(0, Math.min(20, 20 - ((resting_hr - baselineHR) * 2)));
     const hrvScore = Math.min(20, hrv_score / 5);
-    objective = (hrScore + hrvScore) / 2;
+    objective = hrScore + hrvScore;
   }
 
   return Math.min(100, Math.round(subjective + objective));
@@ -55,6 +56,11 @@ const submitCheckin = async (req, res) => {
       [userId, workout_id, energy_level, muscle_soreness, sleep_quality, overall_feeling,
        resting_hr||null, hrv_score||null, sleep_duration_hrs||null, recovery_score]
     );
+    // A recovery check-in completes a (workout -> nutrition -> recovery) label,
+    // so nudge the ML model to retrain on the latest data. Fire-and-forget:
+    // this must not delay or fail the response.
+    triggerRetrain();
+
     res.status(201).json({ message: 'Check-in saved!', recovery_score, checkin: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
