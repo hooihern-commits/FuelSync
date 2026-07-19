@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { router } from 'expo-router';
 import api from '../../src/api/client';
 import { saveToken } from '../../src/storage/token';
+import { saveUser } from '../../src/storage/user';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -20,6 +21,7 @@ export default function RegisterScreen() {
     try {
       const response = await api.post('/auth/register', { name, email, password });
       await saveToken(response.data.token);
+      await saveUser(response.data.user);
       router.replace('/(app)');
     } catch (error: any) {
       Alert.alert('Registration Failed', error.response?.data?.message || 'Something went wrong');

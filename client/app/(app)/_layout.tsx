@@ -1,13 +1,26 @@
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { initTimezoneChangeWatcher } from '../../src/services/notifications';
+import { getUser, StoredUser } from '../../src/storage/user';
 
 export default function AppLayout() {
+  const [user, setUser] = useState<StoredUser | null>(null);
+
   useEffect(() => {
   const cleanup = initTimezoneChangeWatcher();
   return cleanup;
 }, []);
+
+useEffect(() => {
+  getUser().then(setUser);
+}, []);
+
+useEffect(() => {
+  if (user && !user.onboarding_metrics_done) {
+    router.push('/(modals)/onboarding-metrics');
+  }
+}, [user]);
 
   return (
     <Tabs

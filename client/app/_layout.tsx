@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Slot, router } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { getToken } from '../src/storage/token';
 
 export default function RootLayout() {
@@ -19,5 +19,14 @@ export default function RootLayout() {
     checkToken();
   }, []);
 
-  return <Slot />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(app)" />
+      <Stack.Screen
+        name="(modals)/onboarding-metrics"
+        options={{ presentation: 'modal', gestureEnabled: false }}
+      />
+    </Stack>
+  );
 }
