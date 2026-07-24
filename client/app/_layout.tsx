@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Stack, router } from 'expo-router';
 import { getToken } from '../src/storage/token';
+import { ThemeProvider } from '../src/theme';
 
 export default function RootLayout() {
   useEffect(() => {
@@ -20,13 +21,15 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(app)" />
-      <Stack.Screen
-        name="(modals)/onboarding-metrics"
-        options={{ presentation: 'modal', gestureEnabled: false }}
-      />
-    </Stack>
+    <ThemeProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(app)" />
+        <Stack.Screen
+          name="(modals)/onboarding-metrics"
+          options={{ presentation: 'modal', gestureEnabled: false }}
+        />
+      </Stack>
+    </ThemeProvider>
   );
 }

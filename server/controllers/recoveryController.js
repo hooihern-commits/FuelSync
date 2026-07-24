@@ -85,4 +85,19 @@ const getCheckin = async (req, res) => {
   }
 };
 
-module.exports = { submitCheckin, getCheckin };
+// GET /recovery/latest — most recent recovery check-in (for the home gauge)
+const getLatestRecovery = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM recovery_checkins WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1',
+      [userId]
+    );
+    res.json({ checkin: result.rows[0] ?? null });
+  } catch (err) {
+    console.error('getLatestRecovery error:', err);
+    res.status(500).json({ error: 'Server error.' });
+  }
+};
+
+module.exports = { submitCheckin, getCheckin, getLatestRecovery };

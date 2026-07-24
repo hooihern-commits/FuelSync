@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, ScrollView, TextInput,
@@ -14,6 +14,7 @@ import {
   fetchPlannedWorkouts, getPreSuggestion, getPostSuggestion,
 } from '../../src/services/workoutService';
 import { scheduleRecoveryCheckinReminder } from '../../src/services/notifications';
+import { useTheme, ThemeColors } from '../../src/theme';
 
 type Mode = 'plan' | 'log' | 'update';
 
@@ -30,6 +31,8 @@ const WORKOUT_TYPES = [
 ];
 
 export default function PlanWorkoutScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [mode, setMode]       = useState<Mode>('plan');
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState<any>(null);
@@ -229,9 +232,9 @@ export default function PlanWorkoutScreen() {
     <>
       <Text style={styles.label}>Workout Type</Text>
       <View style={styles.pickerBox}>
-        <Picker selectedValue={logType} onValueChange={setLogType} style={{ color: '#01696f' }}>
+        <Picker selectedValue={logType} onValueChange={setLogType} style={{ color: colors.teal }}>
           {WORKOUT_TYPES.map((t) => (
-            <Picker.Item key={t.value} label={t.label} value={t.value} color="#01696f" />
+            <Picker.Item key={t.value} label={t.label} value={t.value} color={colors.teal} />
           ))}
         </Picker>
       </View>
@@ -257,7 +260,7 @@ export default function PlanWorkoutScreen() {
         style={{ width: '100%', height: 40 }}
         minimumValue={1} maximumValue={10} step={1}
         value={actualRpe} onValueChange={setActualRpe}
-        minimumTrackTintColor="#01696f" maximumTrackTintColor="#d3d3d3" thumbTintColor="#01696f"
+        minimumTrackTintColor={colors.teal} maximumTrackTintColor={colors.track} thumbTintColor={colors.teal}
       />
       <View style={styles.rpeRow}>
         <Text>1 — Easy</Text>
@@ -271,7 +274,7 @@ export default function PlanWorkoutScreen() {
         style={styles.inputLike}
         keyboardType="numeric"
         placeholder="e.g. 145"
-        placeholderTextColor="#aaa"
+        placeholderTextColor={colors.muted}
         value={heartRate}
         onChangeText={setHeartRate}
       />
@@ -283,7 +286,7 @@ export default function PlanWorkoutScreen() {
         style={styles.inputLike}
         keyboardType="numeric"
         placeholder="e.g. 450"
-        placeholderTextColor="#aaa"
+        placeholderTextColor={colors.muted}
         value={calories}
         onChangeText={setCalories}
       />
@@ -292,7 +295,7 @@ export default function PlanWorkoutScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
 
         {/* ── PLAN ─────────────────────────────────────── */}
         {mode === 'plan' && (
@@ -304,9 +307,9 @@ export default function PlanWorkoutScreen() {
 
             <Text style={styles.label}>Workout Type</Text>
             <View style={styles.pickerBox}>
-              <Picker selectedValue={workoutType} onValueChange={setWorkoutType} style={{ color: '#01696f' }}>
+              <Picker selectedValue={workoutType} onValueChange={setWorkoutType} style={{ color: colors.teal }}>
                 {WORKOUT_TYPES.map((t) => (
-                  <Picker.Item key={t.value} label={t.label} value={t.value} color="#01696f" />
+                  <Picker.Item key={t.value} label={t.label} value={t.value} color={colors.teal} />
                 ))}
               </Picker>
             </View>
@@ -326,7 +329,7 @@ export default function PlanWorkoutScreen() {
               style={{ width: '100%', height: 40 }}
               minimumValue={1} maximumValue={10} step={1}
               value={plannedRpe} onValueChange={setPlannedRpe}
-              minimumTrackTintColor="#01696f" maximumTrackTintColor="#d3d3d3" thumbTintColor="#01696f"
+              minimumTrackTintColor={colors.teal} maximumTrackTintColor={colors.track} thumbTintColor={colors.teal}
             />
             <View style={styles.rpeRow}>
               <Text>1 — Easy</Text>
@@ -386,7 +389,7 @@ export default function PlanWorkoutScreen() {
             <Text style={styles.label}>Select Planned Workout</Text>
 
             {loadingPlanned ? (
-              <ActivityIndicator color="#01696f" style={{ marginVertical: 12 }} />
+              <ActivityIndicator color={colors.teal} style={{ marginVertical: 12 }} />
             ) : plannedWorkouts.length === 0 ? (
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyText}>No planned workouts found.</Text>
@@ -465,7 +468,7 @@ export default function PlanWorkoutScreen() {
                 value={suggestionData.suggested_protein ?? null}
                 unit="g"
                 label="Protein"
-                color="#01696f"
+                color={colors.teal}
               />
               <NutrientRec
                 value={suggestionData.suggested_carbs ?? null}
@@ -489,44 +492,47 @@ export default function PlanWorkoutScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container:                { flex: 1, backgroundColor: '#fff' },
-  scroll:                   { padding: 24, paddingBottom: 48 },
-  title:                    { fontSize: 28, fontWeight: 'bold', marginBottom: 8 },
-  subtitle:                 { fontSize: 14, color: '#666', marginBottom: 8, lineHeight: 20 },
-  label:                    { fontSize: 16, fontWeight: '600', marginBottom: 8, marginTop: 16 },
-  optional:                 { fontSize: 13, fontWeight: '400', color: '#999' },
-  pickerBox:                { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, overflow: 'hidden', backgroundColor: '#f4f8f8' },
-  inputLike:                { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 14, backgroundColor: '#fff' },
-  inputLikeText:            { fontSize: 16, color: '#111' },
-  rpeRow:                   { flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 },
-  workoutCard:              { borderWidth: 1, borderColor: '#ddd', borderRadius: 12, padding: 14, marginBottom: 10, backgroundColor: '#fff' },
-  workoutCardSelected:      { borderColor: '#01696f', backgroundColor: '#e8f4f4', borderWidth: 2 },
-  workoutCardRow:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  workoutCardType:          { fontSize: 17, fontWeight: '700', color: '#111' },
-  workoutCardTypeSelected:  { color: '#01696f' },
-  workoutCardDate:          { fontSize: 14, color: '#555', marginBottom: 4 },
-  workoutCardDateSelected:  { color: '#01696f' },
-  workoutCardRpe:           { fontSize: 13, color: '#999' },
-  workoutCardRpeSelected:   { color: '#01696f' },
-  selectedBadge:            { backgroundColor: '#01696f', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
-  selectedBadgeText:        { color: '#fff', fontSize: 12, fontWeight: '600' },
-  emptyCard:                { borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 20, alignItems: 'center', backgroundColor: '#fafafa', marginBottom: 8 },
-  emptyText:                { color: '#444', fontSize: 15, fontWeight: '600', marginBottom: 4 },
-  emptySubtext:             { color: '#999', fontSize: 13 },
-  button:                   { marginTop: 24, backgroundColor: '#01696f', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
-  buttonText:               { color: '#fff', fontSize: 16, fontWeight: '600' },
-  secondaryButton:          { marginTop: 12, borderWidth: 1, borderColor: '#01696f', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
-  secondaryButtonText:      { color: '#01696f', fontSize: 15, fontWeight: '600' },
-  skipButton:               { marginTop: 12, borderWidth: 1, borderColor: '#cc3333', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
-  skipButtonText:           { color: '#cc3333', fontSize: 15, fontWeight: '600' },
-  backLink:                 { color: '#01696f', fontSize: 14, fontWeight: '600', marginBottom: 12 },
-  card:                     { marginTop: 24, padding: 18, borderRadius: 16, backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
-  cardHeaderRow:            { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  cardTitle:                { fontSize: 17, fontWeight: '700', color: '#111' },
-  cardTimestamp:            { fontSize: 12, color: '#999' },
-  ringsRow:                 { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
-  tipBox:                   { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#f4f8f8', borderRadius: 12, padding: 12, gap: 8 },
-  tipIcon:                  { fontSize: 16 },
-  tipText:                  { flex: 1, fontSize: 13, color: '#444', lineHeight: 18 },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container:                { flex: 1, backgroundColor: c.bg },
+    scroll:                   { padding: 24, paddingBottom: 48 },
+    title:                    { fontSize: 28, fontWeight: 'bold', marginBottom: 8, color: c.text },
+    subtitle:                 { fontSize: 14, color: c.subtext, marginBottom: 8, lineHeight: 20 },
+    label:                    { fontSize: 16, fontWeight: '600', marginBottom: 8, marginTop: 16, color: c.text },
+    optional:                 { fontSize: 13, fontWeight: '400', color: c.muted },
+    rpeText:                  { fontSize: 13, color: c.subtext },
+    pickerBox:                { borderWidth: 1, borderColor: c.inputBorder, borderRadius: 10, overflow: 'hidden', backgroundColor: c.card },
+    inputLike:                { borderWidth: 1, borderColor: c.inputBorder, borderRadius: 10, padding: 14, backgroundColor: c.inputBg, color: c.text },
+    inputLikeText:            { fontSize: 16, color: c.text },
+    rpeRow:                   { flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 },
+    workoutCard:              { borderWidth: 1, borderColor: c.cardBorder, borderRadius: 12, padding: 14, marginBottom: 10, backgroundColor: c.card },
+    workoutCardSelected:      { borderColor: c.teal, backgroundColor: c.card, borderWidth: 2 },
+    workoutCardRow:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+    workoutCardType:          { fontSize: 17, fontWeight: '700', color: c.text },
+    workoutCardTypeSelected:  { color: c.teal },
+    workoutCardDate:          { fontSize: 14, color: c.subtext, marginBottom: 4 },
+    workoutCardDateSelected:  { color: c.teal },
+    workoutCardRpe:           { fontSize: 13, color: c.muted },
+    workoutCardRpeSelected:   { color: c.teal },
+    selectedBadge:            { backgroundColor: c.teal, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+    selectedBadgeText:        { color: '#fff', fontSize: 12, fontWeight: '600' },
+    emptyCard:                { borderWidth: 1, borderColor: c.cardBorder, borderRadius: 12, padding: 20, alignItems: 'center', backgroundColor: c.card, marginBottom: 8 },
+    emptyText:                { color: c.text, fontSize: 15, fontWeight: '600', marginBottom: 4 },
+    emptySubtext:             { color: c.muted, fontSize: 13 },
+    button:                   { marginTop: 24, backgroundColor: c.teal, borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+    buttonText:               { color: '#fff', fontSize: 16, fontWeight: '600' },
+    secondaryButton:          { marginTop: 12, borderWidth: 1, borderColor: c.teal, borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+    secondaryButtonText:      { color: c.teal, fontSize: 15, fontWeight: '600' },
+    skipButton:               { marginTop: 12, borderWidth: 1, borderColor: '#cc3333', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+    skipButtonText:           { color: '#cc3333', fontSize: 15, fontWeight: '600' },
+    backLink:                 { color: c.teal, fontSize: 14, fontWeight: '600', marginBottom: 12 },
+    card:                     { marginTop: 24, padding: 18, borderRadius: 16, backgroundColor: c.card, borderWidth: 1, borderColor: c.cardBorder, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+    cardHeaderRow:            { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    cardTitle:                { fontSize: 17, fontWeight: '700', color: c.text },
+    cardTimestamp:            { fontSize: 12, color: c.muted },
+    ringsRow:                 { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
+    tipBox:                   { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: c.track, borderRadius: 12, padding: 12, gap: 8 },
+    tipIcon:                  { fontSize: 16 },
+    tipText:                  { flex: 1, fontSize: 13, color: c.text, lineHeight: 18 },
+  });
+}

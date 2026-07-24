@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../src/api/client';
+import { useTheme, ThemeColors } from '../../src/theme';
 import {
   capitalizeWorkoutType,
   getStatusColor,
@@ -18,17 +19,20 @@ import {
 
 
 const Row = ({ label, value }: { label: string; value: string | number | null | undefined }) => {
+  const { colors } = useTheme();
   if (value == null || value === '') return null;
   return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.cardBorder }}>
+      <Text style={{ fontSize: 14, color: colors.subtext, flex: 1 }}>{label}</Text>
+      <Text style={{ fontSize: 14, color: colors.text, fontWeight: '600', flex: 2, textAlign: 'right' }}>{value}</Text>
     </View>
   );
 };
 
 export default function WorkoutDetailScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { workoutDetail } = useLocalSearchParams<{ workoutDetail: string }>();
   const [workout, setWorkout] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -58,7 +62,7 @@ export default function WorkoutDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator color="#01696f" style={{ marginTop: 48 }} />
+        <ActivityIndicator color={colors.teal} style={{ marginTop: 48 }} />
       </SafeAreaView>
     );
   }
@@ -161,26 +165,28 @@ export default function WorkoutDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#fff' },
-  scroll:       { padding: 24, paddingBottom: 48 },
-  backBtn:      { marginBottom: 16 },
-  backText:     { color: '#01696f', fontSize: 14, fontWeight: '600' },
-  header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title:        { fontSize: 28, fontWeight: 'bold', color: '#111' },
-  statusBadge:  { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 },
-  statusText:   { fontSize: 13, fontWeight: '600' },
-  statsRow:     { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#f4f8f8', borderRadius: 14, padding: 16, marginBottom: 24 },
-  statBox:      { alignItems: 'center' },
-  statValue:    { fontSize: 22, fontWeight: '800', color: '#01696f' },
-  statLabel:    { fontSize: 12, color: '#888', marginTop: 2 },
-  section:      { marginBottom: 24, borderWidth: 1, borderColor: '#eee', borderRadius: 14, overflow: 'hidden' },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: '#01696f', backgroundColor: '#f4f8f8', paddingHorizontal: 16, paddingVertical: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
-  row:          { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  rowLabel:     { fontSize: 14, color: '#888', flex: 1 },
-  rowValue:     { fontSize: 14, color: '#111', fontWeight: '600', flex: 2, textAlign: 'right' },
-  emptyCard:    { margin: 24, padding: 28, borderRadius: 14, backgroundColor: '#fafafa', alignItems: 'center' },
-  emptyText:    { fontSize: 15, color: '#888' },
-  skippedCard:  { backgroundColor: '#fff0f0', borderWidth: 1, borderColor: '#ffcccc', borderRadius: 12, padding: 16, alignItems: 'center' },
-  skippedText:  { color: '#cc3333', fontSize: 14, fontWeight: '600' },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container:    { flex: 1, backgroundColor: c.bg },
+    scroll:       { padding: 24, paddingBottom: 48 },
+    backBtn:      { marginBottom: 16 },
+    backText:     { color: c.teal, fontSize: 14, fontWeight: '600' },
+    header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    title:        { fontSize: 28, fontWeight: 'bold', color: c.text },
+    statusBadge:  { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 },
+    statusText:   { fontSize: 13, fontWeight: '600' },
+    statsRow:     { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: c.card, borderRadius: 14, padding: 16, marginBottom: 24 },
+    statBox:      { alignItems: 'center' },
+    statValue:    { fontSize: 22, fontWeight: '800', color: c.teal },
+    statLabel:    { fontSize: 12, color: c.subtext, marginTop: 2 },
+    section:      { marginBottom: 24, borderWidth: 1, borderColor: c.cardBorder, borderRadius: 14, overflow: 'hidden' },
+    sectionTitle: { fontSize: 14, fontWeight: '700', color: c.teal, backgroundColor: c.card, paddingHorizontal: 16, paddingVertical: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+    row:          { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: c.cardBorder },
+    rowLabel:     { fontSize: 14, color: c.subtext, flex: 1 },
+    rowValue:     { fontSize: 14, color: c.text, fontWeight: '600', flex: 2, textAlign: 'right' },
+    emptyCard:    { margin: 24, padding: 28, borderRadius: 14, backgroundColor: c.card, alignItems: 'center' },
+    emptyText:    { fontSize: 15, color: c.subtext },
+    skippedCard:  { backgroundColor: '#fff0f0', borderWidth: 1, borderColor: '#ffcccc', borderRadius: 12, padding: 16, alignItems: 'center' },
+    skippedText:  { color: '#cc3333', fontSize: 14, fontWeight: '600' },
+  });
+}

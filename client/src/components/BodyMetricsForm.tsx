@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme, ThemeColors } from '../theme';
 
 interface Props {
   initialHeight?: string;
@@ -16,6 +17,8 @@ export default function BodyMetricsForm({
   submitLabel = 'Save',
   heightOptional = false,
 }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [height, setHeight] = useState(initialHeight);
   const [weight, setWeight] = useState(initialWeight);
 
@@ -28,7 +31,7 @@ export default function BodyMetricsForm({
         value={height}
         onChangeText={setHeight}
         placeholder="e.g. 175"
-        placeholderTextColor="#666"
+        placeholderTextColor={colors.muted}
       />
 
       <Text style={styles.label}>Weight (kg)</Text>
@@ -38,7 +41,7 @@ export default function BodyMetricsForm({
         value={weight}
         onChangeText={setWeight}
         placeholder="e.g. 70"
-        placeholderTextColor="#666"
+        placeholderTextColor={colors.muted}
       />
 
       <TouchableOpacity
@@ -51,22 +54,25 @@ export default function BodyMetricsForm({
   );
 }
 
-const styles = StyleSheet.create({
-  label: { fontSize: 14, color: '#666', marginBottom: 6, marginTop: 16 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
-    color: '#111',
-  },
-  button: {
-    backgroundColor: '#01696f',
-    borderRadius: 10,
-    padding: 14,
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    label: { fontSize: 14, color: c.subtext, marginBottom: 6, marginTop: 16 },
+    input: {
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      backgroundColor: c.inputBg,
+      borderRadius: 10,
+      padding: 14,
+      fontSize: 16,
+      color: c.text,
+    },
+    button: {
+      backgroundColor: c.teal,
+      borderRadius: 10,
+      padding: 14,
+      alignItems: 'center',
+      marginTop: 24,
+    },
+    buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  });
+}

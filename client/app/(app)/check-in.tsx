@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import api from '../../src/api/client';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { clearPendingCheckinFlag } from '../../src/services/notifications';
+import { useTheme, ThemeColors } from '../../src/theme';
 
 interface CompletedWorkout {
   id: number;
@@ -56,6 +57,8 @@ function getScoreLabel(score: number): string {
 
 export default function CheckinScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [workouts, setWorkouts] = useState<CompletedWorkout[]>([]);
   const [selectedWorkout, setSelectedWorkout] = useState<CompletedWorkout | null>(null);
@@ -150,9 +153,9 @@ export default function CheckinScreen() {
           step={1}
           value={value}
           onValueChange={(v) => onChange(Math.round(v))}
-          minimumTrackTintColor="#01696f"
-          maximumTrackTintColor="#d8e7e7"
-          thumbTintColor="#01696f"
+          minimumTrackTintColor={colors.teal}
+          maximumTrackTintColor={colors.track}
+          thumbTintColor={colors.teal}
         />
         <View style={styles.sliderTicks}>
           {[1, 2, 3, 4, 5].map((n) => (
@@ -168,7 +171,7 @@ export default function CheckinScreen() {
   if (loadingWorkouts) {
     return (
       <SafeAreaView  style={styles.centered}>
-        <ActivityIndicator size="large" color="#01696f" style={{ marginTop: 48 }} />
+        <ActivityIndicator size="large" color={colors.teal} style={{ marginTop: 48 }} />
         <Text style={styles.loadingText}>Loading workouts…</Text>
       </SafeAreaView>
     );
@@ -193,7 +196,7 @@ export default function CheckinScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" >
+    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
       <View style={styles.header}>
         <Text style={styles.title}>Recovery Check-In</Text>
         <Text style={styles.subtitle}>How did your body respond to yesterday's session?</Text>
@@ -235,7 +238,7 @@ export default function CheckinScreen() {
         <Text style={styles.sliderBadgeText}>{SLIDER_LABELS.sleep_quality[sleepQuality - 1]}</Text>
       </View>
     </View>
-    <Slider style={styles.slider} minimumValue={1} maximumValue={5} step={1} value={sleepQuality} onValueChange={(v) => setSleepQuality(Math.round(v))} minimumTrackTintColor="#01696f" maximumTrackTintColor="#d8e7e7" thumbTintColor="#01696f" />
+    <Slider style={styles.slider} minimumValue={1} maximumValue={5} step={1} value={sleepQuality} onValueChange={(v) => setSleepQuality(Math.round(v))} minimumTrackTintColor={colors.teal} maximumTrackTintColor={colors.track} thumbTintColor={colors.teal} />
     <View style={styles.sliderTicks}>{[1,2,3,4,5].map(n => <Text key={n} style={[styles.sliderTick, sleepQuality === n && styles.sliderTickActive]}>{n}</Text>)}</View>
   </View>
 
@@ -247,7 +250,7 @@ export default function CheckinScreen() {
         <Text style={styles.sliderBadgeText}>{SLIDER_LABELS.muscle_soreness[muscleSoreness - 1]}</Text>
       </View>
     </View>
-    <Slider style={styles.slider} minimumValue={1} maximumValue={5} step={1} value={muscleSoreness} onValueChange={(v) => setMuscleSoreness(Math.round(v))} minimumTrackTintColor="#01696f" maximumTrackTintColor="#d8e7e7" thumbTintColor="#01696f" />
+    <Slider style={styles.slider} minimumValue={1} maximumValue={5} step={1} value={muscleSoreness} onValueChange={(v) => setMuscleSoreness(Math.round(v))} minimumTrackTintColor={colors.teal} maximumTrackTintColor={colors.track} thumbTintColor={colors.teal} />
     <View style={styles.sliderTicks}>{[1,2,3,4,5].map(n => <Text key={n} style={[styles.sliderTick, muscleSoreness === n && styles.sliderTickActive]}>{n}</Text>)}</View>
   </View>
 
@@ -259,7 +262,7 @@ export default function CheckinScreen() {
         <Text style={styles.sliderBadgeText}>{SLIDER_LABELS.energy_level[energyLevel - 1]}</Text>
       </View>
     </View>
-    <Slider style={styles.slider} minimumValue={1} maximumValue={5} step={1} value={energyLevel} onValueChange={(v) => setEnergyLevel(Math.round(v))} minimumTrackTintColor="#01696f" maximumTrackTintColor="#d8e7e7" thumbTintColor="#01696f" />
+    <Slider style={styles.slider} minimumValue={1} maximumValue={5} step={1} value={energyLevel} onValueChange={(v) => setEnergyLevel(Math.round(v))} minimumTrackTintColor={colors.teal} maximumTrackTintColor={colors.track} thumbTintColor={colors.teal} />
     <View style={styles.sliderTicks}>{[1,2,3,4,5].map(n => <Text key={n} style={[styles.sliderTick, energyLevel === n && styles.sliderTickActive]}>{n}</Text>)}</View>
   </View>
 
@@ -271,7 +274,7 @@ export default function CheckinScreen() {
         <Text style={styles.sliderBadgeText}>{SLIDER_LABELS.overall_feeling[overallFeeling - 1]}</Text>
       </View>
     </View>
-    <Slider style={styles.slider} minimumValue={1} maximumValue={5} step={1} value={overallFeeling} onValueChange={(v) => setOverallFeeling(Math.round(v))} minimumTrackTintColor="#01696f" maximumTrackTintColor="#d8e7e7" thumbTintColor="#01696f" />
+    <Slider style={styles.slider} minimumValue={1} maximumValue={5} step={1} value={overallFeeling} onValueChange={(v) => setOverallFeeling(Math.round(v))} minimumTrackTintColor={colors.teal} maximumTrackTintColor={colors.track} thumbTintColor={colors.teal} />
     <View style={styles.sliderTicks}>{[1,2,3,4,5].map(n => <Text key={n} style={[styles.sliderTick, overallFeeling === n && styles.sliderTickActive]}>{n}</Text>)}</View>
   </View>
 
@@ -282,7 +285,7 @@ export default function CheckinScreen() {
         <TextInput
           style={styles.notesInput}
           placeholder="e.g. Legs felt heavy, slight knee tightness…"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.muted}
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -308,38 +311,40 @@ export default function CheckinScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container:             { flex: 1, backgroundColor: '#fff' },
-  content:               { padding: 20 },
-  centered:              { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: '#fff' },
-  loadingText:           { marginTop: 12, color: '#666', fontSize: 15 },
-  emptyEmoji:            { fontSize: 48, marginBottom: 16 },
-  emptyTitle:            { fontSize: 18, fontWeight: '600', color: '#1a1a1a', marginBottom: 8, textAlign: 'center' },
-  emptySubtitle:         { fontSize: 14, color: '#666', textAlign: 'center', lineHeight: 22, marginBottom: 24 },
-  header:                { marginBottom: 28 },
-  title:                 { fontSize: 26, fontWeight: '700', color: '#1a1a1a', marginBottom: 6 },
-  subtitle:              { fontSize: 15, color: '#666', lineHeight: 22 },
-  section:               { marginBottom: 24 },
-  sectionLabel:          { fontSize: 13, fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 },
-  workoutChip:           { borderWidth: 1, borderColor: '#d8e7e7', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16, marginRight: 10, backgroundColor: '#f4f8f8', alignItems: 'center', minWidth: 90 },
-  workoutChipActive:     { backgroundColor: '#01696f', borderColor: '#01696f' },
-  workoutChipText:       { fontSize: 13, fontWeight: '600', color: '#1a1a1a', textTransform: 'capitalize' },
-  workoutChipTextActive: { color: '#fff' },
-  workoutChipDate:       { fontSize: 11, color: '#666', marginTop: 2 },
-  workoutChipDateActive: { color: 'rgba(255,255,255,0.8)' },
-  sliderCard:            { backgroundColor: '#f4f8f8', borderRadius: 10, borderWidth: 1, borderColor: '#d8e7e7', padding: 16, marginBottom: 12 },
-  sliderHeader:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  sliderLabel:           { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
-  sliderBadge:           { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 20, paddingVertical: 4, paddingHorizontal: 10, borderWidth: 1, borderColor: '#d8e7e7', gap: 5 },
-  sliderEmoji:           { fontSize: 14 },
-  sliderBadgeText:       { fontSize: 12, fontWeight: '500', color: '#01696f' },
-  slider:                { width: '100%', height: 40 },
-  sliderTicks:           { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: Platform.OS === 'ios' ? 10 : 8, marginTop: -4 },
-  sliderTick:            { fontSize: 12, color: '#aaa', fontWeight: '500' },
-  sliderTickActive:      { color: '#01696f', fontWeight: '700' },
-  notesInput:            { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 14, fontSize: 15, color: '#1a1a1a', backgroundColor: '#fff', minHeight: 90 },
-  button:                { backgroundColor: '#01696f', borderRadius: 10, paddingVertical: 16, alignItems: 'center' },
-  buttonDisabled:        { opacity: 0.6 },
-  buttonText:            { color: '#fff', fontSize: 16, fontWeight: '600' },
-  bottomSpacer:          { height: 32 },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container:             { flex: 1, backgroundColor: c.bg },
+    content:               { padding: 20 },
+    centered:              { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: c.bg },
+    loadingText:           { marginTop: 12, color: c.subtext, fontSize: 15 },
+    emptyEmoji:            { fontSize: 48, marginBottom: 16 },
+    emptyTitle:            { fontSize: 18, fontWeight: '600', color: c.text, marginBottom: 8, textAlign: 'center' },
+    emptySubtitle:         { fontSize: 14, color: c.subtext, textAlign: 'center', lineHeight: 22, marginBottom: 24 },
+    header:                { marginBottom: 28 },
+    title:                 { fontSize: 26, fontWeight: '700', color: c.text, marginBottom: 6 },
+    subtitle:              { fontSize: 15, color: c.subtext, lineHeight: 22 },
+    section:               { marginBottom: 24 },
+    sectionLabel:          { fontSize: 13, fontWeight: '600', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 },
+    workoutChip:           { borderWidth: 1, borderColor: c.cardBorder, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16, marginRight: 10, backgroundColor: c.card, alignItems: 'center', minWidth: 90 },
+    workoutChipActive:     { backgroundColor: c.teal, borderColor: c.teal },
+    workoutChipText:       { fontSize: 13, fontWeight: '600', color: c.text, textTransform: 'capitalize' },
+    workoutChipTextActive: { color: '#fff' },
+    workoutChipDate:       { fontSize: 11, color: c.subtext, marginTop: 2 },
+    workoutChipDateActive: { color: 'rgba(255,255,255,0.8)' },
+    sliderCard:            { backgroundColor: c.card, borderRadius: 10, borderWidth: 1, borderColor: c.cardBorder, padding: 16, marginBottom: 12 },
+    sliderHeader:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+    sliderLabel:           { fontSize: 15, fontWeight: '600', color: c.text },
+    sliderBadge:           { flexDirection: 'row', alignItems: 'center', backgroundColor: c.bg, borderRadius: 20, paddingVertical: 4, paddingHorizontal: 10, borderWidth: 1, borderColor: c.cardBorder, gap: 5 },
+    sliderEmoji:           { fontSize: 14 },
+    sliderBadgeText:       { fontSize: 12, fontWeight: '500', color: c.teal },
+    slider:                { width: '100%', height: 40 },
+    sliderTicks:           { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: Platform.OS === 'ios' ? 10 : 8, marginTop: -4 },
+    sliderTick:            { fontSize: 12, color: c.muted, fontWeight: '500' },
+    sliderTickActive:      { color: c.teal, fontWeight: '700' },
+    notesInput:            { borderWidth: 1, borderColor: c.inputBorder, borderRadius: 10, padding: 14, fontSize: 15, color: c.text, backgroundColor: c.inputBg, minHeight: 90 },
+    button:                { backgroundColor: c.teal, borderRadius: 10, paddingVertical: 16, alignItems: 'center' },
+    buttonDisabled:        { opacity: 0.6 },
+    buttonText:            { color: '#fff', fontSize: 16, fontWeight: '600' },
+    bottomSpacer:          { height: 32 },
+  });
+}

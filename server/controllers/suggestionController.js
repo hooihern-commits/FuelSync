@@ -198,4 +198,19 @@ const postWorkoutAdvice = async (req, res) => {
   }
 };
 
-module.exports = { preWorkoutAdvice, postWorkoutAdvice };
+// GET /suggestions/latest — most recent suggestion for the home dashboard
+const getLatestSuggestion = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const result = await pool.query(
+      `SELECT * FROM suggestions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+    res.json({ suggestion: result.rows[0] ?? null });
+  } catch (err) {
+    console.error('getLatestSuggestion error:', err);
+    res.status(500).json({ error: 'Server error.' });
+  }
+};
+
+module.exports = { preWorkoutAdvice, postWorkoutAdvice, getLatestSuggestion };

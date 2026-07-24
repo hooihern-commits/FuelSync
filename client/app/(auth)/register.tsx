@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { router } from 'expo-router';
 import api from '../../src/api/client';
 import { saveToken } from '../../src/storage/token';
 import { saveUser } from '../../src/storage/user';
+import { useTheme, ThemeColors } from '../../src/theme';
+import DismissKeyboard from '../../src/components/DismissKeyboard';
 
 export default function RegisterScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,7 +35,8 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <DismissKeyboard>
+      <View style={styles.container}>
       <Text style={styles.title}>FuelSync</Text>
       <Text style={styles.subtitle}>Create your account</Text>
 
@@ -41,7 +46,7 @@ export default function RegisterScreen() {
         value={name}
         onChangeText={setName}
         autoCapitalize="words"
-        placeholderTextColor="#666"
+        placeholderTextColor={colors.muted}
       />
 
       <TextInput
@@ -51,7 +56,7 @@ export default function RegisterScreen() {
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
-        placeholderTextColor="#666"
+        placeholderTextColor={colors.muted}
       />
 
       <TextInput
@@ -60,7 +65,7 @@ export default function RegisterScreen() {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        placeholderTextColor="#666"
+        placeholderTextColor={colors.muted}
       />
 
       <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
@@ -70,16 +75,19 @@ export default function RegisterScreen() {
       <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
         <Text style={styles.link}>Already have an account? Log in</Text>
       </TouchableOpacity>
-    </View>
+      </View>
+    </DismissKeyboard>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#fff' },
-  title: { fontSize: 32, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: 16, textAlign: 'center', color: '#666', marginBottom: 32 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 16 },
-  button: { backgroundColor: '#01696f', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 16 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  link: { textAlign: 'center', color: '#01696f', fontSize: 14 },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: c.bg },
+    title: { fontSize: 32, fontWeight: 'bold', textAlign: 'center', marginBottom: 8, color: c.text },
+    subtitle: { fontSize: 16, textAlign: 'center', color: c.subtext, marginBottom: 32 },
+    input: { borderWidth: 1, borderColor: c.inputBorder, backgroundColor: c.inputBg, borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 16, color: c.text },
+    button: { backgroundColor: c.teal, borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 16 },
+    buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    link: { textAlign: 'center', color: c.teal, fontSize: 14 },
+  });
+}

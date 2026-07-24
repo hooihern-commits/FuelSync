@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Image
@@ -8,6 +8,7 @@ import { analyzeFoodPhoto, FoodScanResult } from '../../src/api/foodAI';
 import apiClient from '../../src/api/client';
 import { useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme, ThemeColors } from '../../src/theme';
 
 type MealType = 'pre_workout' | 'post_workout' | 'general';
 
@@ -18,6 +19,8 @@ const MEAL_TYPES: { label: string; value: MealType }[] = [
 ];
 
 export default function LogMealScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { suggestion_id, meal_type: incomingMealType } = useLocalSearchParams();
   const suggestionId = suggestion_id ? parseInt(suggestion_id as string) : null; 
   const [mealType, setMealType] = useState<MealType>((incomingMealType as MealType) ?? 'general');
@@ -128,7 +131,7 @@ export default function LogMealScreen() {
 
   return (
     <SafeAreaView  style={styles.container} >
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
       <Text style={styles.title}>Log Meal</Text>
       <Text style={styles.subtitle}>Track what you eat around your workouts.</Text>
 
@@ -233,29 +236,31 @@ export default function LogMealScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 20, paddingBottom: 60 },
-  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 6 },
-  subtitle: { fontSize: 14, color: '#666', marginBottom: 20 },
-  pillRow: { flexDirection: 'row', backgroundColor: '#f4f8f8', borderRadius: 10, padding: 4, marginBottom: 20 },
-  pill: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  pillActive: { backgroundColor: '#01696f' },
-  pillText: { fontSize: 13, color: '#666', fontWeight: '500' },
-  pillTextActive: { color: '#fff', fontWeight: '600' },
-  card: { backgroundColor: '#f4f8f8', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#d8e7e7' },
-  sectionLabel: { fontSize: 15, fontWeight: '600', color: '#01696f', marginBottom: 12 },
-  photoButtons: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  photoBtn: { flex: 1, borderWidth: 1, borderColor: '#01696f', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
-  photoBtnText: { color: '#01696f', fontWeight: '600', fontSize: 14 },
-  preview: { width: '100%', borderRadius: 10, marginBottom: 12 },
-  scanBtn: { backgroundColor: '#01696f', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 8 },
-  scanBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  confidence: { fontSize: 12, color: '#666', textAlign: 'center' },
-  label: { fontSize: 13, color: '#666', marginBottom: 4, marginTop: 10 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 14, fontSize: 14, backgroundColor: '#fff', minHeight: 48,textAlignVertical: 'top' },
-  row: { flexDirection: 'row', gap: 10 },
-  thirdField: { flex: 1 },
-  submitBtn: { backgroundColor: '#01696f', borderRadius: 10, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
-  submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    content: { padding: 20, paddingBottom: 60 },
+    title: { fontSize: 28, fontWeight: 'bold', marginBottom: 6, color: c.text },
+    subtitle: { fontSize: 14, color: c.subtext, marginBottom: 20 },
+    pillRow: { flexDirection: 'row', backgroundColor: c.card, borderRadius: 10, padding: 4, marginBottom: 20 },
+    pill: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
+    pillActive: { backgroundColor: c.teal },
+    pillText: { fontSize: 13, color: c.subtext, fontWeight: '500' },
+    pillTextActive: { color: '#fff', fontWeight: '600' },
+    card: { backgroundColor: c.card, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: c.cardBorder },
+    sectionLabel: { fontSize: 15, fontWeight: '600', color: c.teal, marginBottom: 12 },
+    photoButtons: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+    photoBtn: { flex: 1, borderWidth: 1, borderColor: c.teal, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+    photoBtnText: { color: c.teal, fontWeight: '600', fontSize: 14 },
+    preview: { width: '100%', borderRadius: 10, marginBottom: 12 },
+    scanBtn: { backgroundColor: c.teal, borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 8 },
+    scanBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    confidence: { fontSize: 12, color: c.subtext, textAlign: 'center' },
+    label: { fontSize: 13, color: c.subtext, marginBottom: 4, marginTop: 10 },
+    input: { borderWidth: 1, borderColor: c.inputBorder, borderRadius: 10, padding: 14, fontSize: 14, backgroundColor: c.inputBg, color: c.text, minHeight: 48, textAlignVertical: 'top' },
+    row: { flexDirection: 'row', gap: 10 },
+    thirdField: { flex: 1 },
+    submitBtn: { backgroundColor: c.teal, borderRadius: 10, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
+    submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  });
+}

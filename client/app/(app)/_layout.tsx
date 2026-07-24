@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import { initTimezoneChangeWatcher } from '../../src/services/notifications';
 import { getUser, StoredUser } from '../../src/storage/user';
+import { useTheme } from '../../src/theme';
 
 export default function AppLayout() {
+  const { colors } = useTheme();
   const [user, setUser] = useState<StoredUser | null>(null);
 
   useEffect(() => {
@@ -37,9 +39,9 @@ useEffect(() => {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#01696f',
-        tabBarInactiveTintColor: '#999',
-        tabBarStyle: { backgroundColor: '#fff', borderTopColor: '#eee' },
+        tabBarActiveTintColor: colors.teal,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarStyle: { backgroundColor: colors.tabBar, borderTopColor: colors.cardBorder },
         headerShown: false,
       }}
     >
@@ -86,6 +88,12 @@ useEffect(() => {
       />
       <Tabs.Screen
         name="nutrientrec"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
         options={{
           href: null,
         }}

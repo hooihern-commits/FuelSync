@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { View, Text , TouchableOpacity, StyleSheet,
   ActivityIndicator, ScrollView, RefreshControl } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import api from '../../src/api/client';
+import { useTheme, ThemeColors } from '../../src/theme';
 
 const STATUS_COLORS: Record<string, string> = {
   completed: '#01696f',
@@ -20,6 +21,8 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function HistoryScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [workouts, setWorkouts]     = useState<any[]>([]);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -61,7 +64,7 @@ export default function HistoryScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator color="#01696f" style={{ marginTop: 48 }} />
+        <ActivityIndicator color={colors.teal} style={{ marginTop: 48 }} />
       </SafeAreaView>
     );
   }
@@ -70,7 +73,7 @@ export default function HistoryScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#01696f" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal} />}
       >
         <Text style={styles.title}>Activity History</Text>
         <Text style={styles.subtitle}>Tap any workout to see full details.</Text>
@@ -144,23 +147,25 @@ export default function HistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#fff' },
-  scroll:       { padding: 24, paddingBottom: 48 },
-  title:        { fontSize: 28, fontWeight: 'bold', marginBottom: 6 },
-  subtitle:     { fontSize: 14, color: '#666', marginBottom: 20 },
-  emptyCard:    { borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 28, alignItems: 'center', backgroundColor: '#fafafa' },
-  emptyText:    { fontSize: 16, fontWeight: '600', color: '#444', marginBottom: 6 },
-  emptySubtext: { fontSize: 13, color: '#999' },
-  card:         { borderWidth: 1, borderColor: '#eee', borderRadius: 14, padding: 16, marginBottom: 12, backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 1, position: 'relative' },
-  cardHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  cardType:     { fontSize: 18, fontWeight: '700', color: '#111' },
-  cardDate:     { fontSize: 13, color: '#888', marginBottom: 12 },
-  statusBadge:  { borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
-  statusText:   { fontSize: 12, fontWeight: '600' },
-  cardStats:    { flexDirection: 'row', gap: 20 },
-  stat:         { alignItems: 'center' },
-  statValue:    { fontSize: 17, fontWeight: '700', color: '#01696f' },
-  statLabel:    { fontSize: 11, color: '#999', marginTop: 1 },
-  chevron:      { position: 'absolute', right: 16, top: '50%', fontSize: 22, color: '#ccc' },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container:    { flex: 1, backgroundColor: c.bg },
+    scroll:       { padding: 24, paddingBottom: 48 },
+    title:        { fontSize: 28, fontWeight: 'bold', marginBottom: 6, color: c.text },
+    subtitle:     { fontSize: 14, color: c.subtext, marginBottom: 20 },
+    emptyCard:    { borderWidth: 1, borderColor: c.cardBorder, borderRadius: 12, padding: 28, alignItems: 'center', backgroundColor: c.card },
+    emptyText:    { fontSize: 16, fontWeight: '600', color: c.text, marginBottom: 6 },
+    emptySubtext: { fontSize: 13, color: c.muted },
+    card:         { borderWidth: 1, borderColor: c.cardBorder, borderRadius: 14, padding: 16, marginBottom: 12, backgroundColor: c.card, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 1, position: 'relative' },
+    cardHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+    cardType:     { fontSize: 18, fontWeight: '700', color: c.text },
+    cardDate:     { fontSize: 13, color: c.subtext, marginBottom: 12 },
+    statusBadge:  { borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
+    statusText:   { fontSize: 12, fontWeight: '600' },
+    cardStats:    { flexDirection: 'row', gap: 20 },
+    stat:         { alignItems: 'center' },
+    statValue:    { fontSize: 17, fontWeight: '700', color: c.teal },
+    statLabel:    { fontSize: 11, color: c.muted, marginTop: 1 },
+    chevron:      { position: 'absolute', right: 16, top: '50%', fontSize: 22, color: c.muted },
+  });
+}
