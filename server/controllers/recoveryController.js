@@ -1,3 +1,4 @@
+const { DateTime } = require('luxon');
 const pool = require('../db');
 const { triggerRetrain } = require('../services/mlClient');
 
@@ -49,14 +50,15 @@ const submitCheckin = async (req, res) => {
     const result = await pool.query(
       `INSERT INTO recovery_checkins
         (user_id, workout_id, energy_level, muscle_soreness, sleep_quality, overall_feeling,
-         resting_hr, hrv_score, sleep_duration_hrs, recovery_score)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         resting_hr, hrv_score, sleep_duration_hrs, recovery_score, checkin_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        ON CONFLICT (user_id, workout_id) DO UPDATE SET
          energy_level=$3, muscle_soreness=$4, sleep_quality=$5, overall_feeling=$6,
-         resting_hr=$7, hrv_score=$8, sleep_duration_hrs=$9, recovery_score=$10
+         resting_hr=$7, hrv_score=$8, sleep_duration_hrs=$9, recovery_score=$10,
+         checkin_date=$11
        RETURNING *`,
       [userId, workout_id, energy_level, muscle_soreness, sleep_quality, overall_feeling,
-       resting_hr||null, hrv_score||null, sleep_duration_hrs||null, recovery_score]
+       resting_hr||null, hrv_score||null, sleep_duration_hrs||null, recovery_score, checkinDate]
     );
     // A recovery check-in completes a (workout -> nutrition -> recovery) label,
     // so nudge the ML model to retrain on the latest data. Fire-and-forget:

@@ -29,6 +29,23 @@ export interface Recovery {
   checkin_date: string;
 }
 
+export interface ReadinessComponent {
+  score: number;
+  weight: number;
+  note: string | null;
+}
+
+export interface Readiness {
+  score: number;
+  band: 'prime' | 'ready' | 'moderate' | 'low' | 'rest';
+  label: string;
+  breakdown: {
+    recovery: ReadinessComponent & { stale: boolean };
+    fueling: ReadinessComponent & { protein_g: number; target_g: number | null };
+    freshness: ReadinessComponent & { load: number };
+  };
+}
+
 export const getLatestSuggestion = async (): Promise<Suggestion | null> => {
   const res = await api.get('/suggestions/latest');
   return res.data?.suggestion ?? null;
@@ -54,6 +71,16 @@ export const getLatestRecovery = async (): Promise<Recovery | null> => {
   try {
     const res = await api.get('/recovery/latest');
     return res.data?.checkin ?? null;
+  } catch {
+    return null;
+  }
+};
+
+// Today's workout-readiness score (recovery + fueling + freshness).
+export const getReadiness = async (): Promise<Readiness | null> => {
+  try {
+    const res = await api.get('/readiness/today');
+    return res.data?.readiness ?? null;
   } catch {
     return null;
   }

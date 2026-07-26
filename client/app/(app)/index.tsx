@@ -6,13 +6,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Path, Line, Circle } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 import { removeToken } from '../../src/storage/token';
 import { getUser, clearUser, StoredUser } from '../../src/storage/user';
 import { fetchWorkouts } from '../../src/services/workoutService';
 import {
-  getLatestSuggestion, getMeals, getLatestRecovery, recordLoginStreak, isSameDay,
-  Suggestion, Meal, Recovery,
+  getLatestSuggestion, getMeals, getLatestRecovery, getReadiness, recordLoginStreak, isSameDay,
+  Suggestion, Meal, Recovery, Readiness,
 } from '../../src/services/homeService';
 import { useTheme, ThemeColors } from '../../src/theme';
 import SettingsDrawer from '../../src/components/SettingsDrawer';
@@ -39,49 +39,98 @@ function scoreLabel(s: number): string {
   return 'Very Poor Recovery';
 }
 
-// ── Speedometer gauge (top semicircle: 0 left → 100 right) ──
-function polar(cx: number, cy: number, r: number, angleDeg: number) {
-  const a = ((angleDeg - 90) * Math.PI) / 180;
-  return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
-}
-function arc(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
-  const start = polar(cx, cy, r, endAngle);
-  const end = polar(cx, cy, r, startAngle);
-  const large = endAngle - startAngle <= 180 ? '0' : '1';
-  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${large} 0 ${end.x} ${end.y}`;
+// ── Recovery ring (Whoop-style donut: colour + score in the centre) ──
+function RecoveryRing({ score, colors }: { score: number; colors: ThemeColors }) {
+  const size = 104, stroke = 9, r = 44;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(score, 100)) / 100;
+  const color = scoreColor(score);
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size}>
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.track} strokeWidth={stroke} fill="none" />
+        <Circle
+          cx={size / 2} cy={size / 2} r={r} stroke={color} strokeWidth={stroke} fill="none"
+          strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </Svg>
+      <View style={{ position: 'absolute', alignItems: 'center' }}>
+        <Text style={{ fontSize: 26, fontWeight: '800', color }}>{Math.round(score)}</Text>
+        <Text style={{ fontSize: 11, color: colors.muted, marginTop: -2 }}>/100</Text>
+      </View>
+    </View>
+  );
 }
 
-function RecoveryGauge({ score, styles, colors }: { score: number | null; styles: any; colors: ThemeColors }) {
-  const cx = 100, cy = 100, r = 82;
-  const f = score != null ? Math.max(0, Math.min(score, 100)) / 100 : 0;
-  const angle = -90 + 180 * f;
-  const tip = polar(cx, cy, r - 16, angle);
-  const color = score != null ? scoreColor(score) : colors.muted;
+// ── Workout readiness: an Oura-style status + qualitative contributors ──
+// Overall band → hero icon + status word (deliberately no numeric scale).
+const READINESS_HERO: Record<Readiness['band'], { icon: keyof typeof Ionicons.glyphMap; status: string; color: string }> = {
+  prime:    { icon: 'flash',            status: 'Ready — go hard', color: '#2e7d32' },
+  ready:    { icon: 'checkmark-circle', status: 'Ready to train',  color: '#2e7d32' },
+  moderate: { icon: 'alert-circle',     status: 'Train easy',      color: '#e8710a' },
+  low:      { icon: 'trending-down',    status: 'Take it light',   color: '#c1571a' },
+  rest:     { icon: 'bed',              status: 'Rest today',      color: '#c62828' },
+};
+
+const GOOD = '#2e7d32', WARN = '#e8710a', BAD = '#c62828';
+
+// Each contributor is shown as a word + colour dot, never a raw number.
+function contributorStatus(
+  key: 'recovery' | 'fueling' | 'freshness',
+  comp: { score: number; stale?: boolean; target_g?: number | null }
+): { word: string; color: string } {
+  if (key === 'recovery' && comp.stale) return { word: 'Check in', color: WARN };
+  if (key === 'fueling' && comp.target_g == null) return { word: 'Log meals', color: WARN };
+  if (comp.score >= 70) return { word: 'Good', color: GOOD };
+  if (comp.score >= 45) return { word: 'Fair', color: WARN };
+  return { word: 'Low', color: BAD };
+}
+
+const CONTRIBUTORS: { key: 'recovery' | 'fueling' | 'freshness'; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'recovery',  label: 'Recovery',  icon: 'heart' },
+  { key: 'fueling',   label: 'Fueling',   icon: 'flame' },
+  { key: 'freshness', label: 'Freshness', icon: 'battery-half' },
+];
+
+function ReadinessCard({ readiness, styles, colors }: { readiness: Readiness | null; styles: any; colors: ThemeColors }) {
+  if (!readiness) {
+    return <Text style={styles.cardEmpty}>Log a workout or check-in to see your readiness.</Text>;
+  }
+  const hero = READINESS_HERO[readiness.band];
+  const b = readiness.breakdown;
+  // One-line reason = the single most limiting factor.
+  const limiting = [b.recovery, b.fueling, b.freshness].reduce((a, c) => (c.score < a.score ? c : a));
 
   return (
-    <View style={{ alignItems: 'center' }}>
-      <Svg width={200} height={118} viewBox="0 0 200 118">
-        <Path d={arc(cx, cy, r, -90, 90)} stroke={colors.track} strokeWidth={14} fill="none" strokeLinecap="round" />
-        {score != null && (
-          <Path d={arc(cx, cy, r, -90, angle)} stroke={color} strokeWidth={14} fill="none" strokeLinecap="round" />
-        )}
-        {score != null && (
-          <>
-            <Line x1={cx} y1={cy} x2={tip.x} y2={tip.y} stroke={color} strokeWidth={3} strokeLinecap="round" />
-            <Circle cx={cx} cy={cy} r={7} fill={color} />
-          </>
-        )}
-      </Svg>
-      {score != null ? (
-        <>
-          <Text style={[styles.gaugeScore, { color }]}>
-            {Math.round(score)}<Text style={styles.gaugeOutOf}> /100</Text>
-          </Text>
-          <Text style={styles.gaugeLabel}>{scoreLabel(score)}</Text>
-        </>
-      ) : (
-        <Text style={styles.cardEmpty}>No recovery check-in logged yet.</Text>
-      )}
+    <View>
+      <View style={styles.readinessHero}>
+        <View style={[styles.readinessIcon, { backgroundColor: hero.color + '22' }]}>
+          <Ionicons name={hero.icon} size={28} color={hero.color} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.readinessStatus, { color: hero.color }]}>{hero.status}</Text>
+          {limiting.note ? <Text style={styles.readinessReason}>{limiting.note}</Text> : null}
+        </View>
+      </View>
+
+      <View style={styles.readinessDivider}>
+        {CONTRIBUTORS.map(({ key, label, icon }) => {
+          const st = contributorStatus(key, b[key]);
+          return (
+            <View key={key} style={styles.contribRow}>
+              <View style={styles.contribLeft}>
+                <Ionicons name={icon} size={17} color={colors.muted} />
+                <Text style={styles.contribLabel}>{label}</Text>
+              </View>
+              <View style={styles.contribRight}>
+                <View style={[styles.contribDot, { backgroundColor: st.color }]} />
+                <Text style={[styles.contribWord, { color: st.color }]}>{st.word}</Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -97,18 +146,20 @@ export default function HomeScreen() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
   const [recovery, setRecovery] = useState<Recovery | null>(null);
+  const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [lastWorkout, setLastWorkout] = useState<any | null>(null);
   const [streak, setStreak] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
-      const [u, w, m, s, rec, days] = await Promise.all([
+      const [u, w, m, s, rec, rdy, days] = await Promise.all([
         getUser(),
         fetchWorkouts().catch(() => []),
         getMeals().catch(() => []),
         getLatestSuggestion().catch(() => null),
         getLatestRecovery().catch(() => null),
+        getReadiness().catch(() => null),
         recordLoginStreak().catch(() => 0),
       ]);
       setUser(u);
@@ -116,6 +167,7 @@ export default function HomeScreen() {
       setMeals(m);
       setSuggestion(s);
       setRecovery(rec);
+      setReadiness(rdy);
       setStreak(days);
 
       const done = w
@@ -205,10 +257,25 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Recovery gauge */}
+        {/* Workout readiness */}
+        <Text style={styles.sectionTitle}>Workout Readiness</Text>
+        <View style={styles.card}>
+          <ReadinessCard readiness={readiness} styles={styles} colors={colors} />
+        </View>
+
+        {/* Recovery ring */}
         <Text style={styles.sectionTitle}>Recovery</Text>
         <View style={styles.card}>
-          <RecoveryGauge score={recovery ? Number(recovery.recovery_score) : null} styles={styles} colors={colors} />
+          {recovery ? (
+            <View style={styles.recoveryRow}>
+              <RecoveryRing score={Number(recovery.recovery_score)} colors={colors} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.recoveryTitle}>{scoreLabel(Number(recovery.recovery_score))}</Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.cardEmpty}>No recovery check-in logged yet.</Text>
+          )}
         </View>
 
         {/* Today's Workout */}
@@ -361,9 +428,19 @@ function makeStyles(c: ThemeColors) {
     cardNote:       { fontSize: 13, color: c.subtext, marginTop: 10, lineHeight: 19 },
     cardEmpty:      { fontSize: 14, color: c.muted },
     cardLink:       { fontSize: 14, color: c.teal, fontWeight: '600', marginTop: 8 },
-    gaugeScore:     { fontSize: 34, fontWeight: '800', marginTop: 2 },
-    gaugeOutOf:     { fontSize: 16, fontWeight: '600', color: c.muted },
-    gaugeLabel:     { fontSize: 14, fontWeight: '600', color: c.subtext, marginTop: 2 },
+    recoveryRow:     { flexDirection: 'row', alignItems: 'center', gap: 18 },
+    recoveryTitle:   { fontSize: 18, fontWeight: '700', color: c.text },
+    readinessHero:   { flexDirection: 'row', alignItems: 'center', gap: 14 },
+    readinessIcon:   { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+    readinessStatus: { fontSize: 20, fontWeight: '800' },
+    readinessReason: { fontSize: 13, color: c.subtext, marginTop: 2, lineHeight: 18 },
+    readinessDivider:{ marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: c.cardBorder, gap: 12 },
+    contribRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    contribLeft:     { flexDirection: 'row', alignItems: 'center', gap: 9 },
+    contribLabel:    { fontSize: 14, color: c.text },
+    contribRight:    { flexDirection: 'row', alignItems: 'center', gap: 7 },
+    contribDot:      { width: 8, height: 8, borderRadius: 4 },
+    contribWord:     { fontSize: 13, fontWeight: '600' },
     badge:          { borderRadius: 12, paddingVertical: 3, paddingHorizontal: 10, backgroundColor: c.track },
     badgePlanned:   {},
     badgeDone:      {},

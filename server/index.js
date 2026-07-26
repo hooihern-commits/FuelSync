@@ -13,6 +13,7 @@ app.use('/meals',       require('./routes/meals'));
 app.use('/workouts',    require('./routes/workouts'));
 app.use('/suggestions', require('./routes/suggestions'));
 app.use('/recovery',    require('./routes/recovery'));
+app.use('/readiness',   require('./routes/readiness'));
 app.use('/body-metrics', require('./routes/bodyMetrics'));
 app.use('/users',        require('./routes/users'));
 

@@ -57,6 +57,7 @@ export default function PlanWorkoutScreen() {
   const [plannedWorkouts, setPlannedWorkouts]     = useState<any[]>([]);
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
   const [loadingPlanned, setLoadingPlanned]       = useState(false);
+  const [showAllPlanned, setShowAllPlanned]       = useState(false);
 
   // ── Pickers ───────────────────────────────────────────────
   const onPlannedTimeChange = (_e: DateTimePickerEvent, date?: Date) => {
@@ -75,13 +76,19 @@ export default function PlanWorkoutScreen() {
   const switchMode = async (next: Mode) => {
     setSuggestion(null);
     setSelectedWorkoutId(null);
+    setShowAllPlanned(false);
     setMode(next);
     if (next === 'update') {
       try {
         setLoadingPlanned(true);
         const workouts = await fetchPlannedWorkouts();
         setPlannedWorkouts(workouts);
-        if (workouts.length > 0) setSelectedWorkoutId(String(workouts[0].id));
+        if (workouts.length > 0) {
+          const mostRecent = [...workouts].sort(
+            (a, b) => new Date(b.planned_time).getTime() - new Date(a.planned_time).getTime()
+          )[0];
+          setSelectedWorkoutId(String(mostRecent.id));
+        }
       } catch (err: any) {
         console.error('fetchPlannedWorkouts error:', err.response?.data || err.message);
         Alert.alert('Error', 'Could not load planned workouts.');
@@ -226,6 +233,12 @@ export default function PlanWorkoutScreen() {
   };
 
   const suggestionData = suggestion?.suggestion ?? suggestion;
+
+  // Show the 2 most recent planned workouts; the rest hide behind a toggle.
+  const sortedPlanned = [...plannedWorkouts].sort(
+    (a, b) => new Date(b.planned_time).getTime() - new Date(a.planned_time).getTime()
+  );
+  const visiblePlanned = showAllPlanned ? sortedPlanned : sortedPlanned.slice(0, 2);
 
   // ── Shared actual fields ──────────────────────────────────
   const renderActualFields = () => (
@@ -396,7 +409,8 @@ export default function PlanWorkoutScreen() {
                 <Text style={styles.emptySubtext}>Head back and plan a workout first.</Text>
               </View>
             ) : (
-              plannedWorkouts.map((w) => {
+              <>
+              {visiblePlanned.map((w) => {
                 const isSelected = selectedWorkoutId === String(w.id);
                 const typeLabel  = w.planned_type.charAt(0).toUpperCase() + w.planned_type.slice(1);
                 const dateLabel  = new Date(w.planned_time).toLocaleDateString('en-SG', {
@@ -430,7 +444,19 @@ export default function PlanWorkoutScreen() {
                     </Text>
                   </TouchableOpacity>
                 );
-              })
+              })}
+              {sortedPlanned.length > 2 && (
+                <TouchableOpacity
+                  style={styles.showMoreBtn}
+                  onPress={() => setShowAllPlanned((v) => !v)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.showMoreText}>
+                    {showAllPlanned ? 'Show less ▲' : `Show ${sortedPlanned.length - 2} more ▼`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              </>
             )}
 
             {renderActualFields()}
@@ -519,6 +545,8 @@ function makeStyles(c: ThemeColors) {
     emptyCard:                { borderWidth: 1, borderColor: c.cardBorder, borderRadius: 12, padding: 20, alignItems: 'center', backgroundColor: c.card, marginBottom: 8 },
     emptyText:                { color: c.text, fontSize: 15, fontWeight: '600', marginBottom: 4 },
     emptySubtext:             { color: c.muted, fontSize: 13 },
+    showMoreBtn:              { paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: c.cardBorder, borderRadius: 10, marginBottom: 10, backgroundColor: c.card },
+    showMoreText:             { color: c.teal, fontSize: 14, fontWeight: '600' },
     button:                   { marginTop: 24, backgroundColor: c.teal, borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
     buttonText:               { color: '#fff', fontSize: 16, fontWeight: '600' },
     secondaryButton:          { marginTop: 12, borderWidth: 1, borderColor: c.teal, borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
