@@ -58,6 +58,25 @@ const getWorkouts = async (req, res) => {
   }
 };
 
+// GET /workouts/:id — Get a single workout (for the detail screen)
+const getWorkoutById = async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT * FROM workouts WHERE id = $1 AND user_id = $2`,
+      [id, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Workout not found.' });
+    }
+    res.json({ workout: result.rows[0] });
+  } catch (err) {
+    console.error('getWorkoutById error:', err);
+    res.status(500).json({ error: 'Server error.' });
+  }
+};
+
 // POST /workouts/log — Log a completed workout with no prior plan
 const logCompletedWorkout = async (req, res) => {
   const {
@@ -250,5 +269,6 @@ module.exports = {
   updateWorkout,
   getWorkouts,
   getPlannedWorkouts,
-  logCompletedWorkout
+  logCompletedWorkout,
+  getWorkoutById
 };

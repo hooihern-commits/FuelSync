@@ -1,0 +1,7 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+# Regenerated inside the image by `python train_recovery_model.py`.
+model/
+data/

@@ -97,6 +97,36 @@ applied (adds `suggested_fats` to the `suggestions` table). `db.py` auto-detects
 whether `meals` uses the migration column names (`carbs`/`protein`/`fats`) or the
 controller names (`carbs_g`/`protein_g`/`fat_g`).
 
+## Deploying to Railway
+
+The service is containerized ([Dockerfile](Dockerfile)) and **trains itself from the
+evidence-based seed at build time**, so the deployed model is ready on first boot —
+end users never train anything to use it.
+
+1. Push the repo to GitHub.
+2. In Railway: **New Project → Deploy from GitHub repo** → pick this repo.
+3. In the service's **Settings → Root Directory**, set `ml_nutrition` (so Railway
+   builds this folder and uses its Dockerfile, not the Node app).
+4. Add a **Variable**: `DATABASE_URL` = your Neon connection string (same one the
+   Node server uses). This lets `/retrain` fold real user data into the model.
+5. Deploy. Railway builds the image (installing deps and baking a seed-trained
+   model), then serves it and gives you a public URL, e.g.
+   `https://fuelsync-ml.up.railway.app`.
+6. Point the backend at it: set `ML_SERVICE_URL` to that URL in the **Node server's**
+   environment (`server/.env` or wherever the API is hosted). The Node client
+   defaults to `http://127.0.0.1:8000`, so this override is what makes production
+   use the deployed model.
+
+Verify with `GET https://<your-app>.up.railway.app/health`.
+
+**Notes**
+- The container filesystem is ephemeral: after a redeploy the model resets to the
+  seed-trained baseline and re-absorbs real data the next time `/retrain` runs
+  (Node triggers it after every recovery check-in). No persistent volume needed —
+  the training data lives in Postgres.
+- `DATABASE_URL` is read from the environment, so no `.env` file is required in the
+  container.
+
 ## Sources (guideline basis for the seed)
 
 - ISSN Position Stand: Protein and Exercise — https://pmc.ncbi.nlm.nih.gov/articles/PMC5477153/
