@@ -5,9 +5,9 @@ const { createWorkout, updateWorkout, getWorkouts, getPlannedWorkouts, logComple
 
 router.post('/', protect, createWorkout);
 router.post('/log', protect, logCompletedWorkout);
-router.get('/planned', protect, getPlannedWorkouts);
+router.get('/planned', protect, getPlannedWorkouts); 
 router.patch('/:id', protect, updateWorkout);
 router.get('/', protect, getWorkouts);
-router.get('/:id', protect, getWorkoutById);   // must stay after '/planned'
+router.get('/:id',protect, getWorkoutById);
 
 module.exports = router;
