@@ -115,15 +115,17 @@ const getAdvice = async ({ phase, workout, user, mealProfile }) => {
   return { advice, source: 'rule', predicted_recovery: null };
 };
 
-const saveSuggestion = async ({ userId, workoutId, phase, advice }) => {
+const saveSuggestion = async ({ userId, workoutId, phase, advice, source, predicted_recovery }) => {
   const saved = await pool.query(
     `INSERT INTO suggestions
        (user_id, workout_id, phase, suggestion_text,
-        suggested_carbs, suggested_protein, suggested_calories, suggested_fats)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        suggested_carbs, suggested_protein, suggested_calories, suggested_fats,
+        source, predicted_recovery)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
     [userId, workoutId, phase, advice.text,
      advice.suggested_carbs, advice.suggested_protein, advice.suggested_calories,
-     advice.suggested_fats ?? null]
+     advice.suggested_fats ?? null,
+     source ?? 'rule', predicted_recovery ?? null]
   );
   return saved.rows[0];
 };

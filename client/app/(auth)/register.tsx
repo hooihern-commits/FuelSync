@@ -28,7 +28,7 @@ export default function RegisterScreen() {
       await saveUser(response.data.user);
       router.replace('/(app)');
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.response?.data?.message || 'Something went wrong');
+      Alert.alert('Registration Failed', error.response?.data?.error || 'Something went wrong');
     } finally {
       setLoading(false);
     }
