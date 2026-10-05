@@ -27,7 +27,7 @@ export default function LoginScreen() {
       await saveUser(response.data.user);
       router.replace('/(app)');
     } catch (error: any) {
-      Alert.alert('Login Failed', error.response?.data?.message || 'Something went wrong');
+      Alert.alert('Login Failed', error.response?.data?.error || 'Something went wrong');
     } finally {
       setLoading(false);
     }

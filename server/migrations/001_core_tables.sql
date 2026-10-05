@@ -64,9 +64,14 @@ CREATE TABLE IF NOT EXISTS suggestions (
 );
 
 -- Link meals back to suggestions (for ML: did they follow the advice?)
-ALTER TABLE meals
-  ADD CONSTRAINT fk_suggestion
-  FOREIGN KEY (suggestion_id) REFERENCES suggestions(id) ON DELETE SET NULL;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_suggestion') THEN
+    ALTER TABLE meals
+      ADD CONSTRAINT fk_suggestion
+      FOREIGN KEY (suggestion_id) REFERENCES suggestions(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- =============================================
 -- RECOVERY CHECK-INS (morning-after feedback)
