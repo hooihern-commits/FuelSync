@@ -33,6 +33,11 @@ DATA_DIR.mkdir(exist_ok=True)
 # Database
 # --------------------------------------------------------------------------
 DATABASE_URL = os.getenv("DATABASE_URL")
+# Hosted Postgres (Neon) needs TLS. Set DATABASE_SSL=false for a local or CI
+# database that has none. Same switch the Node server uses.
+DATABASE_SSLMODE = (
+    "disable" if os.getenv("DATABASE_SSL", "true").lower() == "false" else "require"
+)
 
 # NOTE: the committed migrations (001/002) define the meals table with the
 # columns on the RIGHT, but server/controllers/mealController.js writes the
@@ -119,6 +124,23 @@ REAL_ROW_WEIGHT = 8.0
 # (surfaced in metrics; personalization is trusted throughout regardless).
 MATURE_REAL_ROWS = 50
 RANDOM_STATE = 42
+
+# --------------------------------------------------------------------------
+# Model storage and retraining schedule
+# --------------------------------------------------------------------------
+# Trained models are saved to the ml_models table (server migration 005) as
+# well as to local disk. The table is what makes a retrained model survive a
+# redeploy, and what keeps every replica of this service on the same version.
+MODEL_NAME = "recovery"
+# Old versions kept in the table for rollback.
+MODEL_KEEP_VERSIONS = int(os.getenv("MODEL_KEEP_VERSIONS", "5"))
+# A retrain runs when the newest stored model is older than this. 0 turns
+# scheduled retraining off (POST /retrain still works).
+RETRAIN_INTERVAL_HOURS = float(os.getenv("RETRAIN_INTERVAL_HOURS", "24"))
+# How often the service checks for a newer stored model and for a due retrain.
+MODEL_POLL_SECONDS = int(os.getenv("MODEL_POLL_SECONDS", "300"))
+# A retrain is killed if it runs longer than this.
+RETRAIN_TIMEOUT_SECONDS = int(os.getenv("RETRAIN_TIMEOUT_SECONDS", "1800"))
 
 # FastAPI service
 SERVICE_HOST = os.getenv("ML_HOST", "127.0.0.1")

@@ -1,6 +1,6 @@
 const { DateTime } = require('luxon');
 const pool = require('../db');
-const { triggerRetrain } = require('../services/mlClient');
+const { getDailySummary } = require('../services/healthSummary');
 
 // Score formula: 0–100
 const computeRecoveryScore = ({ energy_level, muscle_soreness, sleep_quality, overall_feeling, resting_hr, hrv_score, baselineHR }) => {
@@ -36,16 +36,33 @@ const submitCheckin = async (req, res) => {
   }
 
   try {
-    // Get user's baseline HR from their profile for objective scoring
-    const userResult = await pool.query('SELECT * FROM users WHERE id=$1', [userId]);
-    const baselineHR = userResult.rows[0]?.resting_hr_baseline || resting_hr || 60;
+    const owned = await pool.query(
+      'SELECT 1 FROM workouts WHERE id = $1 AND user_id = $2', [workout_id, userId]
+    );
+    if (owned.rows.length === 0) return res.status(404).json({ error: 'Workout not found.' });
+
+    const checkinDate = DateTime.now().setZone(req.timezone).toISODate();
+
+    // Objective inputs. Values sent with the check-in win; anything missing
+    // is filled from the day's wearable summary, if one exists.
+    const [userResult, summary] = await Promise.all([
+      pool.query('SELECT resting_hr_baseline FROM users WHERE id = $1', [userId]),
+      getDailySummary(pool, userId, checkinDate),
+    ]);
+    const num = (v) => (v == null ? null : Number(v));
+    const restingHr = resting_hr || num(summary?.resting_hr);
+    const hrvScore = hrv_score || num(summary?.hrv_avg_ms);
+    const sleepHrs = sleep_duration_hrs
+      || (summary?.sleep_mins != null ? Math.round((summary.sleep_mins / 60) * 100) / 100 : null);
+
+    // Baseline: the user's rolling median resting HR (kept up to date by the
+    // sync), else today's reading, else a typical adult value.
+    const baselineHR = userResult.rows[0]?.resting_hr_baseline || restingHr || 60;
 
     const recovery_score = computeRecoveryScore({
       energy_level, muscle_soreness, sleep_quality, overall_feeling,
-      resting_hr, hrv_score, baselineHR
+      resting_hr: restingHr, hrv_score: hrvScore, baselineHR
     });
-
-    const checkinDate = DateTime.now().setZone(req.timezone).toISODate();
 
     const result = await pool.query(
       `INSERT INTO recovery_checkins
@@ -58,15 +75,15 @@ const submitCheckin = async (req, res) => {
          checkin_date=$11
        RETURNING *`,
       [userId, workout_id, energy_level, muscle_soreness, sleep_quality, overall_feeling,
-       resting_hr||null, hrv_score||null, sleep_duration_hrs||null, recovery_score, checkinDate]
+       restingHr != null ? Math.round(restingHr) : null, hrvScore ?? null, sleepHrs ?? null,
+       recovery_score, checkinDate]
     );
-    // A recovery check-in completes a (workout -> nutrition -> recovery) label,
-    // so nudge the ML model to retrain on the latest data. Fire-and-forget:
-    // this must not delay or fail the response.
-    triggerRetrain();
+    // The ML service retrains on its own schedule (see ml_nutrition/serve.py),
+    // so a check-in no longer triggers a retrain.
 
     res.status(201).json({ message: 'Check-in saved!', recovery_score, checkin: result.rows[0] });
   } catch (err) {
+    console.error('submitCheckin error:', err.message);
     res.status(500).json({ error: 'Server error.' });
   }
 };

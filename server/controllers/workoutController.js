@@ -1,4 +1,6 @@
 const pool = require('../db');
+const { isDataSource } = require('../config/dataSources');
+const { parsePage, nextBefore } = require('../services/pagination');
 
 // POST /workouts — Plan a workout
 const createWorkout = async (req, res) => {
@@ -43,15 +45,21 @@ const getPlannedWorkouts = async (req, res) => {
   }
 };
 
-// GET /workouts — Get all workouts for user
+// GET /workouts — newest first. Pass ?limit= (and ?before=) to page.
 const getWorkouts = async (req, res) => {
   const userId = req.user.id;
+  const page = parsePage(req.query);
+  if (page.error) return res.status(400).json({ error: page.error });
   try {
     const result = await pool.query(
-      `SELECT * FROM workouts WHERE user_id = $1 ORDER BY planned_time DESC`,
-      [userId]
+      `SELECT * FROM workouts
+        WHERE user_id = $1
+          AND ($2::timestamptz IS NULL OR planned_time < $2::timestamptz)
+        ORDER BY planned_time DESC
+        LIMIT $3`,
+      [userId, page.before, page.limit]
     );
-    res.json({ workouts: result.rows });
+    res.json({ workouts: result.rows, next_before: nextBefore(result.rows, page.limit, 'planned_time') });
   } catch (err) {
     console.error('getWorkouts error:', err);
     res.status(500).json({ error: 'Server error.' });
@@ -87,11 +95,18 @@ const logCompletedWorkout = async (req, res) => {
     heart_rate_avg,
     calories_burned,
     data_source,
-    notes
+    notes,
+    source_record_id,
+    device
   } = req.body;
   const userId = req.user.id;
 
-  console.log('logCompletedWorkout body:', req.body);
+  if (data_source != null && !isDataSource(data_source)) {
+    return res.status(400).json({ error: 'Unknown data_source.' });
+  }
+  if (source_record_id != null && (typeof source_record_id !== 'string' || !source_record_id || source_record_id.length > 200)) {
+    return res.status(400).json({ error: 'source_record_id must be a string of 1 to 200 characters.' });
+  }
 
   if (!actual_type || !actual_start_time || !actual_end_time || actual_rpe == null) {
     return res.status(400).json({
@@ -119,14 +134,30 @@ const logCompletedWorkout = async (req, res) => {
         planned_type, planned_time, planned_rpe,
         actual_type, actual_start_time, actual_end_time, duration_mins,
         actual_rpe, heart_rate_avg, calories_burned,
-        data_source, notes, status
+        data_source, notes, source_record_id, device, status
       ) VALUES (
         $1,
         $2, $3, $4,
         $5, $6, $7, $8,
         $9, $10, $11,
-        $12, $13, 'completed'
-      ) RETURNING *`,
+        $12, $13, $14, $15, 'completed'
+      )
+      -- A record that carries its source's id is stored once. Sending it
+      -- again updates the row instead of adding a duplicate.
+      ON CONFLICT (user_id, data_source, source_record_id)
+        WHERE source_record_id IS NOT NULL
+      DO UPDATE SET
+        actual_type       = EXCLUDED.actual_type,
+        actual_start_time = EXCLUDED.actual_start_time,
+        actual_end_time   = EXCLUDED.actual_end_time,
+        duration_mins     = EXCLUDED.duration_mins,
+        actual_rpe        = EXCLUDED.actual_rpe,
+        heart_rate_avg    = EXCLUDED.heart_rate_avg,
+        calories_burned   = EXCLUDED.calories_burned,
+        notes             = COALESCE(EXCLUDED.notes, workouts.notes),
+        device            = COALESCE(EXCLUDED.device, workouts.device),
+        updated_at        = NOW()
+      RETURNING *, (xmax = 0) AS inserted`,
       [
         userId,
         actual_type, actual_start_time, actual_rpe,
@@ -135,16 +166,17 @@ const logCompletedWorkout = async (req, res) => {
         heart_rate_avg || null,
         calories_burned || null,
         data_source || 'manual',
-        notes || null
+        notes || null,
+        source_record_id ?? null,
+        device || null
       ]
     );
 
-    console.log('logCompletedWorkout success, duration_mins:', duration_mins);
-
-    res.status(201).json({
-      message: 'Workout logged!',
+    const { inserted, ...workout } = result.rows[0];
+    res.status(inserted ? 201 : 200).json({
+      message: inserted ? 'Workout logged!' : 'Workout already logged; updated.',
       duration_mins,
-      workout: result.rows[0]
+      workout
     });
   } catch (err) {
     console.error('logCompletedWorkout error:', err);
@@ -157,8 +189,6 @@ const updateWorkout = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
 
-  console.log('updateWorkout body:', req.body);
-
   const {
     actual_type,
     actual_start_time,
@@ -170,6 +200,10 @@ const updateWorkout = async (req, res) => {
     notes,
     status
   } = req.body;
+
+  if (data_source != null && !isDataSource(data_source)) {
+    return res.status(400).json({ error: 'Unknown data_source.' });
+  }
 
   try {
     const check = await pool.query(
@@ -231,7 +265,9 @@ const updateWorkout = async (req, res) => {
         actual_rpe        = $5,
         heart_rate_avg    = $6,
         calories_burned   = $7,
-        data_source       = $8,
+        -- A workout synced from a wearable keeps its source, so the next
+        -- sync still recognises the row.
+        data_source       = CASE WHEN source_record_id IS NOT NULL THEN data_source ELSE $8 END,
         notes             = $9,
         status            = 'completed',
         updated_at        = NOW()
@@ -250,8 +286,6 @@ const updateWorkout = async (req, res) => {
         userId
       ]
     );
-
-    console.log('updateWorkout success, duration_mins:', duration_mins);
 
     res.json({
       message: 'Workout updated!',

@@ -9,8 +9,11 @@ Continual (regressive) learning:
   * Real (workout -> nutrition -> recovery) rows from Postgres are appended and
     up-weighted (REAL_ROW_WEIGHT) via sample_weight, so each real observation
     outweighs the generic prior and the model regresses toward real users.
-  * Call retrain() (CLI, or the service's POST /retrain) whenever new recovery
-    check-ins land to fold the new feedback in.
+  * The service retrains on a schedule (RETRAIN_INTERVAL_HOURS, default 24)
+    in a separate process, so new check-ins are folded in daily without
+    slowing recommendations. POST /retrain or this CLI forces one.
+  * Each trained model is stored in the ml_models table, so it survives a
+    redeploy and every replica serves the same version.
 
 Run:  python train_recovery_model.py
 """
@@ -33,9 +36,10 @@ from features import FEATURE_COLUMNS, TARGET, build_preprocessor
 from seed_knowledge import build_seed_frame
 
 try:
-    from db import load_training_frame
+    from db import load_training_frame, save_model
 except Exception:  # noqa: BLE001 - psycopg2 optional when running seed-only
     load_training_frame = None
+    save_model = None
 
 
 def _assemble_dataset() -> tuple[pd.DataFrame, np.ndarray, int, int]:
@@ -108,7 +112,25 @@ def train():
 
     print(f"[train] saved -> {MODEL_PATH} | holdout MAE={mae:.2f} R2={r2:.3f} | "
           f"real_rows={n_real} matured={metrics['matured_on_real_data']}")
+
+    _publish(metrics)
     return metrics
+
+
+def _publish(metrics: dict) -> None:
+    """Store the new model in the ml_models table.
+
+    Local disk is wiped on redeploy and is not shared between replicas, so
+    the table is the copy of record. With no database (the Docker build, or
+    local seed-only use) the model stays on disk only.
+    """
+    if save_model is None:
+        return
+    try:
+        model_id = save_model(MODEL_PATH.read_bytes(), metrics)
+        print(f"[train] published model version {model_id} to ml_models")
+    except Exception as exc:  # noqa: BLE001 - disk copy still usable
+        print(f"[train] could not publish to ml_models ({exc}); kept on disk only")
 
 
 # Alias: continual retraining is just a fresh blend of seed + latest real data.

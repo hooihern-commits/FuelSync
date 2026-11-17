@@ -1,4 +1,5 @@
 const pool = require('../db');
+const { isDataSource } = require('../config/dataSources');
 
 async function logMetrics(req, res) {
   const { height_cm, weight_kg, data_source = 'manual' } = req.body;
@@ -6,6 +7,9 @@ async function logMetrics(req, res) {
 
   if (!weight_kg) {
     return res.status(400).json({ error: 'weight_kg is required' });
+  }
+  if (!isDataSource(data_source)) {
+    return res.status(400).json({ error: 'Unknown data_source.' });
   }
 
   try {

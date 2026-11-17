@@ -73,7 +73,7 @@ predicting personalised macro targets based on your own history.
 fuelsync/
 ├── client/ # Expo mobile app
 ├── server/ # Node.js + Express backend API
-├── ml/ # Python FastAPI ML microservice (Phase 6)
+├── ml_nutrition/ # Python FastAPI ML microservice (Phase 6)
 └── dashboard/ # React.js coach/admin web dashboard (Phase 7)
 ```
 
@@ -105,29 +105,98 @@ npx expo start
 ### ML Microservice *(Phase 6)*
 
 ```bash
-cd ml
+cd ml_nutrition
 pip install -r requirements.txt
-uvicorn main:app --reload
+uvicorn serve:app --reload
 ```
+
+The service loads the newest trained model from the `ml_models` table and
+retrains once a day (`RETRAIN_INTERVAL_HOURS`). See `ml_nutrition/README.md`.
+
+### Tests
+
+Server and ML tests run against a real Postgres database. Use a disposable
+one: the tests empty every table.
+
+```bash
+# Server (applies all migrations, then runs Jest + Supertest)
+cd server
+DATABASE_URL=postgres://postgres@localhost:5432/fuelsync_test DATABASE_SSL=false npm test
+
+# ML service (needs the server migrations applied to the same database)
+cd ml_nutrition
+pip install -r requirements.txt -r requirements-dev.txt
+DATABASE_URL=postgres://postgres@localhost:5432/fuelsync_test DATABASE_SSL=false python -m pytest tests
+
+# Client
+cd client && npm test
+```
+
+GitHub Actions runs all three on every pull request (`.github/workflows/ci.yml`).
 
 ---
 
 ## API Overview
 
+Every route is served under `/v1`. The same routes also answer at the root
+path so app builds released before versioning keep working. New code should
+call `/v1`.
+
 | Method | Route | Description |
 |---|---|---|
-| POST | `/auth/register` | Register a new user |
-| POST | `/auth/login` | Log in and receive a JWT |
-| POST | `/meals` | Log a meal |
-| GET | `/meals` | Get all meals for the logged-in user |
-| POST | `/workouts` | Phase 1: plan a workout |
-| PATCH | `/workouts/:id` | Phase 2: complete a workout with actual stats |
-| POST | `/workouts/log` | Log a completed workout directly (skip Phase 1) |
-| GET | `/workouts` | Get all workouts for the logged-in user |
-| POST | `/suggestions/pre` | Get a pre-workout nutrition suggestion |
-| POST | `/suggestions/post` | Get a post-workout recovery nutrition suggestion |
-| POST | `/recovery` | Submit a morning recovery check-in |
-| GET | `/recovery/:workout_id` | Get the recovery check-in for a specific workout |
+| POST | `/v1/auth/register` | Register a new user |
+| POST | `/v1/auth/login` | Log in and receive a JWT |
+| POST | `/v1/meals` | Log a meal |
+| GET | `/v1/meals` | Meals, newest first. Optional `?limit=` and `?before=` |
+| POST | `/v1/workouts` | Phase 1: plan a workout |
+| PATCH | `/v1/workouts/:id` | Phase 2: complete a workout with actual stats |
+| POST | `/v1/workouts/log` | Log a completed workout directly (skip Phase 1) |
+| GET | `/v1/workouts` | Workouts, newest first. Optional `?limit=` and `?before=` |
+| POST | `/v1/suggestions/pre` | Get a pre-workout nutrition suggestion |
+| POST | `/v1/suggestions/post` | Get a post-workout recovery nutrition suggestion |
+| POST | `/v1/recovery` | Submit a morning recovery check-in |
+| GET | `/v1/recovery/:workout_id` | Get the recovery check-in for a specific workout |
+| POST | `/v1/sync/batch` | Upload wearable samples and workouts (see below) |
+| GET | `/v1/sync/state` | Saved sync anchors for one device |
+| GET | `/v1/sync/summary` | Daily health summaries for a date range |
+
+List endpoints return every row when no `limit` is given. With `limit`
+(1 to 200) the response includes `next_before`; pass it back as `before` for
+the next page.
+
+### Wearable sync
+
+HealthKit and Health Connect only run on the phone, so the app reads the data
+and uploads it in batches:
+
+```json
+POST /v1/sync/batch
+{
+  "source": "apple_healthkit",
+  "device_id": "<stable id for this phone>",
+  "samples": [
+    { "metric": "heart_rate", "value": 142, "start_at": "2026-11-10T08:12:05Z", "source_record_id": "<HealthKit UUID>" },
+    { "metric": "steps", "value": 850, "start_at": "2026-11-10T08:00:00Z", "end_at": "2026-11-10T08:15:00Z", "source_record_id": "<id>" }
+  ],
+  "workouts": [
+    { "source_record_id": "<id>", "type": "running", "start_time": "...", "end_time": "...",
+      "heart_rate_avg": 151, "heart_rate_max": 178, "calories_burned": 520 }
+  ],
+  "anchors": { "heart_rate": "<HealthKit anchor>", "workouts": "<anchor>" }
+}
+```
+
+- Up to 5,000 samples and 200 workouts per batch. Metrics and units are listed
+  in `server/config/healthMetrics.js`.
+- Sending the same batch again changes nothing. Each record is stored once per
+  `source_record_id`.
+- A synced workout within 2 hours of a planned one completes that plan.
+- Anchors are saved in the same transaction as the data. After a failed
+  upload, the device resumes from its last saved anchor (`GET /v1/sync/state`).
+- Each sync rebuilds `daily_health_summary` for the days it touched and
+  updates the user's resting HR baseline (30-day median, once 7 days exist).
+  The recovery check-in fills resting HR, HRV and sleep from that summary
+  when the user does not enter them.
 
 ---
 
@@ -135,11 +204,20 @@ uvicorn main:app --reload
 
 | Table | Key Fields |
 |---|---|
-| `users` | id, name, email, password, age, weight, height, goal |
-| `meals` | id, user_id, name, calories, protein, carbs, fats, meal_time, photo_url, suggestion_id |
-| `workouts` | id, user_id, planned_type, planned_time, planned_rpe, actual stats, status, data_source |
-| `suggestions` | id, workout_id, type (pre/post), carbs_g, protein_g, notes |
+| `users` | id, name, email, password, age, goal, resting_hr_baseline |
+| `meals` | id, user_id, meal_name, calories_kcal, protein_g, carbs_g, fat_g, logged_at, suggestion_id |
+| `workouts` | id, user_id, planned_type, planned_time, planned_rpe, actual stats, status, data_source, source_record_id, device |
+| `suggestions` | id, workout_id, phase (pre/post), suggested macros, source (ml/rule) |
 | `recovery_checkins` | id, workout_id, energy_level, muscle_soreness, sleep_quality, overall_feeling, recovery_score |
+| `body_metrics` | id, user_id, height_cm, weight_kg, logged_at |
+| `health_samples` | id, user_id, metric, value, unit, start_at, end_at, source, source_record_id |
+| `daily_health_summary` | user_id, local_date, resting_hr, hrv_avg_ms, sleep_mins, steps, active_kcal |
+| `sync_state` | user_id, device_id, source, metric, anchor |
+| `ml_models` | id, name, metrics, artifact, created_at |
+
+Schema changes are numbered SQL files in `server/migrations/`, applied with
+`npm run migrate`. Allowed `data_source` values live in
+`server/config/dataSources.js`, so adding a wearable needs no migration.
 
 ---
 
