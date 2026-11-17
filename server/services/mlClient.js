@@ -35,20 +35,4 @@ const getRecommendation = async (payload) => {
   }
 };
 
-/**
- * Fire-and-forget: tell the ML service to retrain on the latest data.
- * Called after a recovery check-in (a new training label) is saved, so the
- * model continually regresses toward real users. Never throws; failures are
- * logged and ignored so they can't affect the request that triggered them.
- */
-const triggerRetrain = () => {
-  fetch(`${ML_SERVICE_URL}/retrain`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    signal: AbortSignal.timeout(ML_TIMEOUT_MS),
-  }).catch((err) => {
-    console.warn(`[mlClient] retrain trigger failed (${err.name}); ignored`);
-  });
-};
-
-module.exports = { getRecommendation, triggerRetrain };
+module.exports = { getRecommendation };

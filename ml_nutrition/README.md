@@ -34,11 +34,19 @@ predicted recovery — grounded in evidence-based guidelines and adjusted per us
   g/kg per serving, fat kept lower pre-workout. Recovery peaks at the guideline
   ideal and falls off as intake diverges (carbs weighted most).
 - **Continual / regressive learning.** Every recovery check-in completes a
-  `(workout → nutrition → recovery)` label. The Node recovery controller fires
-  `POST /retrain`; the service re-blends the seed with all real rows, **weighting
-  each real observation 8× the seed** (`REAL_ROW_WEIGHT`), so the model regresses
-  toward this app's actual users as data grows. It's usable on day one because
-  it's grounded in science, not cold.
+  `(workout → nutrition → recovery)` label. Once a day (`RETRAIN_INTERVAL_HOURS`)
+  the service re-blends the seed with all real rows, **weighting each real
+  observation 8× the seed** (`REAL_ROW_WEIGHT`), so the model regresses toward
+  this app's actual users as data grows. It's usable on day one because it's
+  grounded in science, not cold.
+- **Retraining off the request path.** Training runs in a separate process, so
+  it does not slow `/recommend`. A Postgres advisory lock makes sure only one
+  replica trains at a time.
+- **Durable models.** Each trained model is saved to the `ml_models` table
+  (server migration 005). Every replica loads the newest version on boot and
+  checks for a newer one every `MODEL_POLL_SECONDS`, so a retrained model
+  survives redeploys and all replicas serve the same version. The last
+  `MODEL_KEEP_VERSIONS` versions are kept.
 - **Personalization.** Recommendations are nudged toward the averages of the
   user's recently logged meals (`get_user_meal_profile`).
 - **Graceful fallback.** If the service is down/slow, Node falls back to the
@@ -54,7 +62,8 @@ predicted recovery — grounded in evidence-based guidelines and adjusted per us
 | `db.py` | Loads real training data + user meal profile (auto-detects meals schema) |
 | `train_recovery_model.py` | Trains/retrains the blended model (`train`/`retrain`) |
 | `optimize.py` | Searches macros to maximize predicted recovery |
-| `serve.py` | FastAPI: `/recommend`, `/health`, `/retrain`, `/reload` |
+| `serve.py` | FastAPI: `/recommend`, `/health`, `/retrain`, `/reload`; model polling and scheduled retraining |
+| `tests/` | pytest suite; needs `DATABASE_URL` for the database tests |
 | `fallback.py` | Rule-based cold-start advice (mirrors the Node rules) |
 
 ## Setup & run
@@ -79,9 +88,10 @@ Set `DATABASE_URL` in the repo-root `.env` (same one Node uses) to fold real dat
 - `GET  /health` — model status + metrics (rows, R², maturity on real data)
 - `POST /recommend` — `{ phase, workout_type, rpe, duration_mins, weight, goal, ... }`
   → `{ source: "ml"|"rule", suggested_carbs, suggested_protein, suggested_fats, ... }`
-- `POST /retrain` — background retrain on seed + latest real data (called by Node
-  after each recovery check-in)
-- `POST /reload` — reload the artifact without retraining
+- `POST /retrain` — force a retrain now on seed + latest real data. Runs in the
+  background; the daily schedule covers normal use.
+- `POST /reload` — load the newest stored model now, without waiting for the
+  next poll
 
 ## Current model quality
 
@@ -120,10 +130,11 @@ end users never train anything to use it.
 Verify with `GET https://<your-app>.up.railway.app/health`.
 
 **Notes**
-- The container filesystem is ephemeral: after a redeploy the model resets to the
-  seed-trained baseline and re-absorbs real data the next time `/retrain` runs
-  (Node triggers it after every recovery check-in). No persistent volume needed —
-  the training data lives in Postgres.
+- The container filesystem is ephemeral, so the trained model is also stored in
+  the `ml_models` table. After a redeploy the service loads the newest stored
+  version instead of the seed-trained baseline baked into the image. Run the
+  server migrations (`npm run migrate` in `server/`) before the first deploy so
+  the table exists. No persistent volume needed.
 - `DATABASE_URL` is read from the environment, so no `.env` file is required in the
   container.
 
